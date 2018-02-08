@@ -127,8 +127,8 @@ geantservice.g4PostInitCommands += ["/run/setCut 0.1 mm"]
 from Configurables import SimG4Alg, SimG4SaveCalHits, SimG4SingleParticleGeneratorTool, SimG4SaveTrackerHits,
 
 savetrackertool = SimG4SaveTrackerHits("saveTrackerHits", readoutNames = ["TrackerBarrelReadout", "TrackerEndcapReadout"]) 
-savetrackertool.positionedTrackHits.Path = "trackerPositionedHits"
-savetrackertool.trackHits.Path = "trackerHits"
+savetrackertool.positionedTrackHits.Path = "TrackerPositionedHits"
+savetrackertool.trackHits.Path = "TrackerHits"
 saveecaltool = SimG4SaveCalHits("saveECalBarrelHits",readoutNames = [ecalBarrelReadoutName])
 saveecaltool.positionedCaloHits.Path = "ECalBarrelPositionedHits"
 saveecaltool.caloHits.Path = "ECalBarrelHits"
