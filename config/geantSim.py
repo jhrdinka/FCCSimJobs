@@ -124,7 +124,7 @@ geantservice = SimG4Svc("SimG4Svc", detector='SimG4DD4hepDetector', physicslist=
 # range cut
 geantservice.g4PostInitCommands += ["/run/setCut 0.1 mm"]
 
-from Configurables import SimG4Alg, SimG4SaveCalHits, SimG4SingleParticleGeneratorTool, SimG4SaveTrackerHits,
+from Configurables import SimG4Alg, SimG4SaveCalHits, SimG4SingleParticleGeneratorTool, SimG4SaveTrackerHits
 
 savetrackertool = SimG4SaveTrackerHits("saveTrackerHits", readoutNames = ["TrackerBarrelReadout", "TrackerEndcapReadout"]) 
 savetrackertool.positionedTrackHits.Path = "TrackerPositionedHits"
@@ -337,7 +337,7 @@ out = PodioOutput("out")
 out.outputCommands = ["drop *",
                       "keep GenParticles",
                       "keep GenVertices",
-                      "keep TrackerHits"
+                      "keep TrackerHits",
                       "keep ECalBarrelCells",
                       "keep ECalEndcapCells",
                       "keep ECalFwdCells",
