@@ -144,7 +144,10 @@ if __name__=="__main__":
         short_job_type = "recWin"
     elif '--recTopoClusters' in sys.argv:
         default_options = 'config/recTopoClusters.py'
-        job_type = "reco/topoClusters"
+        if '--noise' in sys.argv:
+            job_type = "reco/topoClusters/electronicsNoise"        
+        else:
+            job_type = "reco/topoClusters/noNoise"
         short_job_type = "recTopo"
     elif '--ntuple' in sys.argv:
         default_options = '....' # TODO how ?
@@ -171,6 +174,7 @@ if __name__=="__main__":
     singlePartGroup.add_argument('--phiMin', type=float, default=0, help='Minimal azimuthal angle')
     singlePartGroup.add_argument('--phiMax', type=float, default=2*pi, help='Maximal azimuthal angle')
     singlePartGroup.add_argument('--particle', type=int,  required = '--singlePart' in sys.argv, help='Particle type (PDG)')
+    singlePartGroup.add_argument('--flat', action='store_true', help='flat energy distribution for single particle generation')
 
     physicsGroup = parser.add_argument_group('Physics','Physics process')
     lhe_physics = ["ljets","top","Wqq","Zqq","Hbb"]
@@ -230,6 +234,7 @@ if __name__=="__main__":
         etaMax = args.etaMax
         phiMin = args.phiMin
         phiMax = args.phiMax
+        flat = args.flat
         pdg = args.particle
         particle_human_names = {11: 'electron', -11: 'positron', -13: 'mup', 13: 'mum', 22: 'photon', 111: 'pi0', 211: 'pip', -211: 'pim', 130: "K0L"}
         print "=================================="
@@ -254,7 +259,10 @@ if __name__=="__main__":
             print "phi: from ", phiMin, " to ", phiMax
             if not(phiMin == 0 and phiMax == 2*pi):
                 eta_str += "_phiFrom" + str(decimal.Decimal(str(phiMin)).normalize()).replace('-','M') + "To" + str(decimal.Decimal(str(phiMax)).normalize()).replace('-','M')
-        job_dir = "singlePart/" + particle_human_names[pdg] + "/" + b_field_str + "/" + eta_str + "/" + str(energy) + "GeV/"
+        if flat:
+            job_dir = "singlePart/" + particle_human_names[pdg] + "/" + b_field_str + "/" + eta_str + "/flat"
+        else:
+            job_dir = "singlePart/" + particle_human_names[pdg] + "/" + b_field_str + "/" + eta_str + "/" + str(energy) + "GeV/"
     elif args.physics:
         print "=================================="
         print "==           PHYSICS           ==="
@@ -405,6 +413,9 @@ if __name__=="__main__":
         if '--recPositions' in sys.argv:
             frun.write('python %s/Convert.py edm.root $JOBDIR/%s\n'%(current_dir,outfile))
             frun.write('rm edm.root \n')
+        if '--recTopoClusters' in sys.argv:
+            frun.write('python %s/Convert.py $JOBDIR/%s $JOBDIR/%s \n'%(current_dir,outfile,outfile+'_ntuple.root'))
+            frun.write('python /afs/cern.ch/work/h/helsens/public/FCCutils/eoscopy.py $JOBDIR/%s %s\n'%(outfile+'_ntuple.root',outdir))
         frun.write('python /afs/cern.ch/work/h/helsens/public/FCCutils/eoscopy.py $JOBDIR/%s %s\n'%(outfile,outdir))
         frun.write('rm $JOBDIR/%s \n'%(outfile))
         frun.close()
