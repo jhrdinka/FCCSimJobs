@@ -51,6 +51,14 @@ gen_energy = r.std.vector(float)()
 gen_pdgid = r.std.vector(float)()
 gen_status = r.std.vector(float)()
 
+cluster_eta = r.std.vector(float)()
+cluster_phi = r.std.vector(float)()
+cluster_pt  = r.std.vector(float)()
+cluster_ene = r.std.vector(float)()
+cluster_x = r.std.vector(float)()
+cluster_y = r.std.vector(float)()
+cluster_z = r.std.vector(float)()
+
 rec_eta = r.std.vector(float)()
 rec_phi = r.std.vector(float)()
 rec_pt  = r.std.vector(float)()
@@ -72,10 +80,20 @@ print 'Number of events : ',maxEvent
 ev_num = n.zeros(1, dtype=int) 
 ev_e =  n.zeros(1, dtype=float)
 ev_ebench =  n.zeros(1, dtype=float)
+ev_nRechits = n.zeros(1, dtype=int) 
 
 outtree.Branch("ev_num", ev_num, "ev_num/I")
 outtree.Branch("ev_e", ev_e, "ev_e/D")
 outtree.Branch("ev_ebench", ev_ebench, "ev_ebench/D")
+outtree.Branch("ev_nRechits", ev_nRechits, "ev_nRechits/I")
+
+outtree.Branch("cluster_pt", cluster_pt)
+outtree.Branch("cluster_eta", cluster_eta)
+outtree.Branch("cluster_phi", cluster_phi)
+outtree.Branch("cluster_energy", cluster_ene)
+outtree.Branch("cluster_x", cluster_x)
+outtree.Branch("cluster_y", cluster_y)
+outtree.Branch("cluster_z", cluster_z)
 
 outtree.Branch("rechit_pt", rec_pt)
 outtree.Branch("rechit_eta", rec_eta)
@@ -97,6 +115,7 @@ outtree.Branch("gen_pdgid", gen_pdgid)
 numEvent = 0
 for event in intree:
     ev_num[0] = numEvent
+    numHits = 0
     E = .0
     Ebench = .0
     Eem = 0
@@ -123,113 +142,133 @@ for event in intree:
             gen_pdgid.push_back(g.core.pdgId)
             gen_status.push_back(g.core.status)
 
-    for c in event.HCalBarrelCellPositions:
-        hcalBarrel_decoder.setValue(c.core.cellId)
-        position = r.TVector3(c.position.x,c.position.y,c.position.z)
-        rec_ene.push_back(c.core.energy)
-        rec_eta.push_back(position.Eta())
-        rec_phi.push_back(position.Phi())
-        rec_pt.push_back(c.core.energy*position.Unit().Perp())
-        rec_layer.push_back(hcalBarrel_decoder["layer"] + lastECalBarrelLayer + 1)
-        rec_x.push_back(c.position.x/10.)
-        rec_y.push_back(c.position.y/10.)
-        rec_z.push_back(c.position.z/10.)
-        rec_detid.push_back(systemID(c.core.cellId))
-        if hcalBarrel_decoder["layer"] == 0:
-            EhadFirst += c.core.energy
-        E += c.core.energy
-        Ehad += c.core.energy
-        
-    for c in event.ECalBarrelCellPositions:
-        ecalBarrel_decoder.setValue(c.core.cellId)
-        position = r.TVector3(c.position.x,c.position.y,c.position.z)
-        rec_ene.push_back(c.core.energy)
-        rec_eta.push_back(position.Eta())
-        rec_phi.push_back(position.Phi())
-        rec_pt.push_back(c.core.energy*position.Unit().Perp())
-        rec_layer.push_back(ecalBarrel_decoder["layer"])
-        rec_x.push_back(c.position.x/10.)
-        rec_y.push_back(c.position.y/10.)
-        rec_z.push_back(c.position.z/10.)
-        rec_detid.push_back(systemID(c.core.cellId))
-        if ecalBarrel_decoder["layer"] == lastECalBarrelLayer:
-            EemLast += c.core.energy
-        E += c.core.energy
-        Eem += c.core.energy
+    if event.GetBranchStatus("caloClustersBarrel"):
+        for c in event.caloClustersBarrel:
+            position = r.TVector3(c.core.position.x,c.core.position.y,c.core.position.z)
+            cluster_ene.push_back(c.core.energy)
+            cluster_eta.push_back(position.Eta())
+            cluster_phi.push_back(position.Phi())
+            cluster_pt.push_back(c.core.energy*position.Unit().Perp())
+            cluster_x.push_back(c.core.position.x/10.)
+            cluster_y.push_back(c.core.position.y/10.)
+            cluster_z.push_back(c.core.position.z/10.)
 
-    for c in event.HCalExtBarrelCellPositions:
-        hcalExtBarrel_decoder.setValue(c.core.cellId)
-        position = r.TVector3(c.position.x,c.position.y,c.position.z)
-        rec_ene.push_back(c.core.energy)
-        rec_eta.push_back(position.Eta())
-        rec_phi.push_back(position.Phi())
-        rec_pt.push_back(c.core.energy*position.Unit().Perp())
-        rec_layer.push_back(hcalExtBarrel_decoder["layer"] + lastECalBarrelLayer + 1)
-        rec_x.push_back(c.position.x/10.)
-        rec_y.push_back(c.position.y/10.)
-        rec_z.push_back(c.position.z/10.)
-        rec_detid.push_back(systemID(c.core.cellId))
-        E += c.core.energy
+    else:
+        for c in event.HCalBarrelCellPositions:
+            hcalBarrel_decoder.setValue(c.core.cellId)
+            position = r.TVector3(c.position.x,c.position.y,c.position.z)
+            rec_ene.push_back(c.core.energy)
+            rec_eta.push_back(position.Eta())
+            rec_phi.push_back(position.Phi())
+            rec_pt.push_back(c.core.energy*position.Unit().Perp())
+            rec_layer.push_back(hcalBarrel_decoder["layer"] + lastECalBarrelLayer + 1)
+            rec_x.push_back(c.position.x/10.)
+            rec_y.push_back(c.position.y/10.)
+            rec_z.push_back(c.position.z/10.)
+            rec_detid.push_back(systemID(c.core.cellId))
+            if hcalBarrel_decoder["layer"] == 0:
+                EhadFirst += c.core.energy
+            E += c.core.energy
+            Ehad += c.core.energy
+            numHits += 1
+    
+        for c in event.ECalBarrelCellPositions:
+            ecalBarrel_decoder.setValue(c.core.cellId)
+            position = r.TVector3(c.position.x,c.position.y,c.position.z)
+            rec_ene.push_back(c.core.energy)
+            rec_eta.push_back(position.Eta())
+            rec_phi.push_back(position.Phi())
+            rec_pt.push_back(c.core.energy*position.Unit().Perp())
+            rec_layer.push_back(ecalBarrel_decoder["layer"])
+            rec_x.push_back(c.position.x/10.)
+            rec_y.push_back(c.position.y/10.)
+            rec_z.push_back(c.position.z/10.)
+            rec_detid.push_back(systemID(c.core.cellId))
+            if ecalBarrel_decoder["layer"] == lastECalBarrelLayer:
+                EemLast += c.core.energy
+            E += c.core.energy
+            Eem += c.core.energy
+            numHits += 1
 
-    for c in event.ECalEndcapCellPositions:
-        ecalEndcap_decoder.setValue(c.core.cellId)
-        position = r.TVector3(c.position.x,c.position.y,c.position.z)
-        rec_ene.push_back(c.core.energy)
-        rec_eta.push_back(position.Eta())
-        rec_phi.push_back(position.Phi())
-        rec_pt.push_back(c.core.energy*position.Unit().Perp())
-        rec_layer.push_back(ecalEndcap_decoder["layer"])
-        rec_x.push_back(c.position.x/10.)
-        rec_y.push_back(c.position.y/10.)
-        rec_z.push_back(c.position.z/10.)
-        rec_detid.push_back(systemID(c.core.cellId))
-        E += c.core.energy
+        for c in event.HCalExtBarrelCellPositions:
+            hcalExtBarrel_decoder.setValue(c.core.cellId)
+            position = r.TVector3(c.position.x,c.position.y,c.position.z)
+            rec_ene.push_back(c.core.energy)
+            rec_eta.push_back(position.Eta())
+            rec_phi.push_back(position.Phi())
+            rec_pt.push_back(c.core.energy*position.Unit().Perp())
+            rec_layer.push_back(hcalExtBarrel_decoder["layer"] + lastECalBarrelLayer + 1)
+            rec_x.push_back(c.position.x/10.)
+            rec_y.push_back(c.position.y/10.)
+            rec_z.push_back(c.position.z/10.)
+            rec_detid.push_back(systemID(c.core.cellId))
+            E += c.core.energy
+            numHits += 1
+            
+        for c in event.ECalEndcapCellPositions:
+            ecalEndcap_decoder.setValue(c.core.cellId)
+            position = r.TVector3(c.position.x,c.position.y,c.position.z)
+            rec_ene.push_back(c.core.energy)
+            rec_eta.push_back(position.Eta())
+            rec_phi.push_back(position.Phi())
+            rec_pt.push_back(c.core.energy*position.Unit().Perp())
+            rec_layer.push_back(ecalEndcap_decoder["layer"])
+            rec_x.push_back(c.position.x/10.)
+            rec_y.push_back(c.position.y/10.)
+            rec_z.push_back(c.position.z/10.)
+            rec_detid.push_back(systemID(c.core.cellId))
+            E += c.core.energy
+            numHits += 1
 
-    for c in event.HCalEndcapCellPositions:
-        hcalEndcap_decoder.setValue(c.core.cellId)
-        position = r.TVector3(c.position.x,c.position.y,c.position.z)
-        rec_ene.push_back(c.core.energy)
-        rec_eta.push_back(position.Eta())
-        rec_phi.push_back(position.Phi())
-        rec_pt.push_back(c.core.energy*position.Unit().Perp())
-        rec_layer.push_back(hcalEndcap_decoder["layer"] + lastECalEndcapLayer + 1)
-        rec_x.push_back(c.position.x/10.)
-        rec_y.push_back(c.position.y/10.)
-        rec_z.push_back(c.position.z/10.)
-        rec_detid.push_back(systemID(c.core.cellId))
-        E += c.core.energy
+        for c in event.HCalEndcapCellPositions:
+            hcalEndcap_decoder.setValue(c.core.cellId)
+            position = r.TVector3(c.position.x,c.position.y,c.position.z)
+            rec_ene.push_back(c.core.energy)
+            rec_eta.push_back(position.Eta())
+            rec_phi.push_back(position.Phi())
+            rec_pt.push_back(c.core.energy*position.Unit().Perp())
+            rec_layer.push_back(hcalEndcap_decoder["layer"] + lastECalEndcapLayer + 1)
+            rec_x.push_back(c.position.x/10.)
+            rec_y.push_back(c.position.y/10.)
+            rec_z.push_back(c.position.z/10.)
+            rec_detid.push_back(systemID(c.core.cellId))
+            E += c.core.energy
+            numHits += 1
 
-    for c in event.ECalFwdCellPositions:
-        ecalFwd_decoder.setValue(c.core.cellId)
-        position = r.TVector3(c.position.x,c.position.y,c.position.z)
-        rec_ene.push_back(c.core.energy)
-        rec_eta.push_back(position.Eta())
-        rec_phi.push_back(position.Phi())
-        rec_pt.push_back(c.core.energy*position.Unit().Perp())
-        rec_layer.push_back(ecalFwd_decoder["layer"])
-        rec_x.push_back(c.position.x/10.)
-        rec_y.push_back(c.position.y/10.)
-        rec_z.push_back(c.position.z/10.)
-        rec_detid.push_back(systemID(c.core.cellId))
-        E += c.core.energy
+        for c in event.ECalFwdCellPositions:
+            ecalFwd_decoder.setValue(c.core.cellId)
+            position = r.TVector3(c.position.x,c.position.y,c.position.z)
+            rec_ene.push_back(c.core.energy)
+            rec_eta.push_back(position.Eta())
+            rec_phi.push_back(position.Phi())
+            rec_pt.push_back(c.core.energy*position.Unit().Perp())
+            rec_layer.push_back(ecalFwd_decoder["layer"])
+            rec_x.push_back(c.position.x/10.)
+            rec_y.push_back(c.position.y/10.)
+            rec_z.push_back(c.position.z/10.)
+            rec_detid.push_back(systemID(c.core.cellId))
+            E += c.core.energy
+            numHits += 1
 
-    for c in event.HCalFwdCellPositions:
-        hcalFwd_decoder.setValue(c.core.cellId)
-        position = r.TVector3(c.position.x,c.position.y,c.position.z)
-        rec_ene.push_back(c.core.energy)
-        rec_eta.push_back(position.Eta())
-        rec_phi.push_back(position.Phi())
-        rec_pt.push_back(c.core.energy*position.Unit().Perp())
-        rec_layer.push_back(hcalFwd_decoder["layer"] + lastECalFwdLayer + 1)
-        rec_x.push_back(c.position.x/10.)
-        rec_y.push_back(c.position.y/10.)
-        rec_z.push_back(c.position.z/10.)
-        rec_detid.push_back(systemID(c.core.cellId))
-        E += c.core.energy
+        for c in event.HCalFwdCellPositions:
+            hcalFwd_decoder.setValue(c.core.cellId)
+            position = r.TVector3(c.position.x,c.position.y,c.position.z)
+            rec_ene.push_back(c.core.energy)
+            rec_eta.push_back(position.Eta())
+            rec_phi.push_back(position.Phi())
+            rec_pt.push_back(c.core.energy*position.Unit().Perp())
+            rec_layer.push_back(hcalFwd_decoder["layer"] + lastECalFwdLayer + 1)
+            rec_x.push_back(c.position.x/10.)
+            rec_y.push_back(c.position.y/10.)
+            rec_z.push_back(c.position.z/10.)
+            rec_detid.push_back(systemID(c.core.cellId))
+            E += c.core.energy
+            numHits += 1
 
     ev_ebench[0] = benchmarkCorr(Eem,EemLast,Ehad,EhadFirst)
     ev_e[0] = E
-
+    ev_nRechits[0] = numHits
+    
     outtree.Fill()
 
     gen_eta.clear()
@@ -239,6 +278,14 @@ for event in intree:
     gen_pdgid.clear()
     gen_status.clear()
 
+    cluster_eta.clear()
+    cluster_phi.clear()
+    cluster_pt.clear()
+    cluster_ene.clear()
+    cluster_x.clear()
+    cluster_y.clear()
+    cluster_z.clear()
+    
     rec_eta.clear()
     rec_phi.clear()
     rec_pt.clear()
@@ -250,6 +297,7 @@ for event in intree:
     rec_detid.clear()
     
     numEvent += 1
+
 outtree.Write()
 outfile.Write()
 outfile.Close()
