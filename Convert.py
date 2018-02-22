@@ -153,6 +153,17 @@ for event in intree:
             cluster_y.push_back(c.core.position.y/10.)
             cluster_z.push_back(c.core.position.z/10.)
 
+    else if event.GetBranchStatus("caloClustersBarrelNoise"):
+        for c in event.caloClustersBarrel:
+            position = r.TVector3(c.core.position.x,c.core.position.y,c.core.position.z)
+            cluster_ene.push_back(c.core.energy)
+            cluster_eta.push_back(position.Eta())
+            cluster_phi.push_back(position.Phi())
+            cluster_pt.push_back(c.core.energy*position.Unit().Perp())
+            cluster_x.push_back(c.core.position.x/10.)
+            cluster_y.push_back(c.core.position.y/10.)
+            cluster_z.push_back(c.core.position.z/10.)
+
     else:
         for c in event.HCalBarrelCellPositions:
             hcalBarrel_decoder.setValue(c.core.cellId)
