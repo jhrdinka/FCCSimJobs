@@ -406,7 +406,11 @@ if __name__=="__main__":
             else:
                 # run single particles
                 frun.write('cd $JOBDIR\n')
-                frun.write('%s  --singlePart --particle %i -e %i --etaMin %f --etaMax %f --phiMin %f --phiMax %f\n'%(common_fccsw_command, pdg, energy, etaMin, etaMax, phiMin, phiMax))
+                if flat:
+                    frun.write('%s  --singlePart --particle %i -e %i --etaMin %f --etaMax %f --phiMin %f --phiMax %f --flat \n'%(common_fccsw_command, pdg, energy, etaMin, etaMax, phiMin, phiMax))
+                else:
+                    frun.write('%s  --singlePart --particle %i -e %i --etaMin %f --etaMax %f --phiMin %f --phiMax %f\n'%(common_fccsw_command, pdg, energy, etaMin, etaMax, phiMin, phiMax))
+                
         else:
             frun.write('cd $JOBDIR\n')
             frun.write('%s --inName %s\n'%(common_fccsw_command, input_files[i]))

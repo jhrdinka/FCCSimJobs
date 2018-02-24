@@ -153,8 +153,8 @@ for event in intree:
             cluster_y.push_back(c.core.position.y/10.)
             cluster_z.push_back(c.core.position.z/10.)
 
-    else if event.GetBranchStatus("caloClustersBarrelNoise"):
-        for c in event.caloClustersBarrel:
+    elif event.GetBranchStatus("caloClustersBarrelNoise"):
+        for c in event.caloClustersBarrelNoise:
             position = r.TVector3(c.core.position.x,c.core.position.y,c.core.position.z)
             cluster_ene.push_back(c.core.energy)
             cluster_eta.push_back(position.Eta())

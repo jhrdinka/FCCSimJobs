@@ -317,7 +317,7 @@ out.outputCommands = ["drop *", "keep GenParticles", "keep GenVertices", "keep c
 out.filename = output_name
 
 if noise:
-    out.outputCommands += ["keep ECalBarrelCellsNoise", "keep HCalBarrelCellsForTopoNoise", "keep caloClustersBarrelNoise", "keep caloClusterBarrelNoiseCellPositions"]
+    out.outputCommands += ["keep ECalBarrelCellsNoise", "keep HCalBarrelCellsForTopoNoise", "keep caloClustersBarrelNoise", "keep caloClusterBarrelNoiseCells", "keep caloClusterBarrelNoiseCellPositions"]
 out.filename = output_name
 
 #CPU information
