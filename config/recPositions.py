@@ -60,6 +60,22 @@ podioevent = FCCDataSvc("EventDataSvc", input=input_name)
 
 podioinput = PodioInput("PodioReader", collections = ["ECalBarrelCells", "HCalBarrelCells", "HCalExtBarrelCells", "ECalEndcapCells", "HCalEndcapCells", "ECalFwdCells", "HCalFwdCells", "TailCatcherCells","GenParticles","GenVertices"], OutputLevel = DEBUG)
 
+##############################################################################################################                                                                                                                                
+#######                                       RECALIBRATE ECAL                                   #############                                                                                                                                
+##############################################################################################################                                                                                                                                
+
+from Configurables import CalibrateInLayersTool, CreateCaloCells
+recalibEcalBarrel = CalibrateInLayersTool("RecalibrateEcalBarrel",
+                                          samplingFraction = [0.299654475899/0.12125] + [0.148166996525/0.14283] + [0.163005489744/0.16354] + [0.176907220821/0.17662] + [0.189980731321/0.18867] + [0.202201963561/0.19890] + [0.214090761907/0.20637] + [0.224706564289/0.20802],
+                                          readoutName = ecalBarrelReadoutName,
+                                          layerFieldName = "layer")
+recreateEcalBarrelCells = CreateCaloCells("redoEcalBarrelCells",
+                                          doCellCalibration=True,
+                                          calibTool=recalibEcalBarrel,
+                                          addCellNoise=False, filterCellNoise=False)
+recreateEcalBarrelCells.hits.Path="ECalBarrelCells"
+recreateEcalBarrelCells.cells.Path="ECalBarrelCellsRedo"
+
 ##############################################################################################################
 #######                                       CELL POSITIONS                                     #############
 ##############################################################################################################
@@ -96,7 +112,7 @@ TailCatchercells = CellPositionsTailCatcherTool("CellPositionsTailCatcher",
 from Configurables import CreateCellPositions
 positionsEcalBarrel = CreateCellPositions("positionsEcalBarrel", 
                                           positionsTool=ECalBcells, 
-                                          hits = "ECalBarrelCells", 
+                                          hits = "ECalBarrelCellsRedo", 
                                           positionedHits = "ECalBarrelCellPositions", 
                                           OutputLevel = INFO)
 positionsHcalBarrel = CreateCellPositions("positionsHcalBarrel", 
@@ -146,6 +162,7 @@ chra = ChronoAuditor()
 audsvc = AuditorSvc()
 audsvc.Auditors = [chra]
 podioinput.AuditExecute = True
+recreateEcalBarrelCells.AuditExecute = True
 positionsEcalBarrel.AuditExecute = True
 positionsEcalEndcap.AuditExecute = True
 positionsEcalFwd.AuditExecute = True
@@ -157,6 +174,7 @@ positionsTailCatcher.AuditExecute = True
 out.AuditExecute = True
 
 list_of_algorithms = [podioinput,
+                      recreateEcalBarrelCells,
                       positionsEcalBarrel,
                       positionsEcalEndcap,
                       positionsEcalFwd, 

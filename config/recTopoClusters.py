@@ -100,6 +100,23 @@ rewriteHcal = RewriteHCalBarrelBitfield("RewriteHCalBitfield",
 rewriteHcal.inhits.Path = "HCalBarrelCells"
 rewriteHcal.outhits.Path = "HCalBarrelCellsForTopo"
 
+
+##############################################################################################################                                                                                                                 
+#######                                       RECALIBRATE ECAL                                   #############                                                                                                                   
+##############################################################################################################               
+
+from Configurables import CalibrateInLayersTool, CreateCaloCells
+recalibEcalBarrel = CalibrateInLayersTool("RecalibrateEcalBarrel",
+                                          samplingFraction = [0.299654475899/0.12125] + [0.148166996525/0.14283] + [0.163005489744/0.16354] + [0.176907220821/0.17662] + [0.189980731321/0.18867] + [0.202201963561/0.19890] + [0.214090761907/0.20637] + [0.224706564289/0.20802],
+                                          readoutName = ecalBarrelReadoutName,
+                                          layerFieldName = "layer")
+recreateEcalBarrelCells = CreateCaloCells("redoEcalBarrelCells",
+                                          doCellCalibration=True,
+                                          calibTool=recalibEcalBarrel,
+                                          addCellNoise=False, filterCellNoise=False)
+recreateEcalBarrelCells.hits.Path="ECalBarrelCells"
+recreateEcalBarrelCells.cells.Path="ECalBarrelCellsRedo"
+
 ##############################################################################################################
 #######                                       CELL POSITIONS  TOOLS                              #############
 ##############################################################################################################
@@ -139,16 +156,12 @@ createemptycells.cells.Path = "emptyCaloCells"
 from Configurables import TopoCaloNeighbours, TopoCaloNoisyCells
 # read the neighbours map
 readNeighboursMap = TopoCaloNeighbours("ReadNeighboursMap",
-                                       fileName = "/afs/cern.ch/user/c/cneubuse/public/FCChh/neighbours_map_segHcal.root",
+                                       fileName = "/afs/cern.ch/work/c/cneubuse/public/FCChh/neighbours_map_segHcal.root",
                                        OutputLevel = DEBUG)
 
 ##############################################################################################################
 #######                          NOISE/NO NOISE TOOL FOR CLUSTER THRESHOLDS                      #############
 ##############################################################################################################
-
-#Configure tools for calo reconstruction
-from Configurables import ConstNoiseTool
-noiseTool = ConstNoiseTool("ConstNoiseTool")
 
 if noise:
 
@@ -176,7 +189,7 @@ if noise:
                                             doCellCalibration=False, # already calibrated
                                             addCellNoise=True, filterCellNoise=False,
                                             noiseTool = noiseBarrel,
-                                            hits="ECalBarrelCells",
+                                            hits="ECalBarrelCellsRedo",
                                             cells="ECalBarrelCellsNoise")
     
     # HCal Barrel noise
@@ -219,7 +232,7 @@ if noise:
     createTopoInputNoise.hcalFwdCells.Path = "emptyCaloCells"
     
     readNoisyCellsMap = TopoCaloNoisyCells("ReadNoisyCellsMap",
-                                           fileName = "/afs/cern.ch/user/c/cneubuse/public/FCChh/cellNoise_map_segHcal.root",
+                                           fileName = "/afs/cern.ch/work/c/cneubuse/public/FCChh/cellNoise_map_segHcal.root",
                                            OutputLevel = DEBUG)
     
     # Topo-Cluster Algorithm 
@@ -257,9 +270,9 @@ if noise:
 #######                                 TOPO-CLUSTERING                                          #############
 ##############################################################################################################
 
-# Noise set to 0!!!
+# Electronic noise level without added noise for topo thresholds set to 1.875MeV and 2.875MeV in E and HCal
 readNoisyCellsMap = TopoCaloNoisyCells("ReadNoisyCellsMap",
-                                       fileName = "/afs/cern.ch/user/c/cneubuse/public/FCChh/cellNoise_map_segHcal_zeroNoise.root",
+                                       fileName = "/afs/cern.ch/work/c/cneubuse/public/FCChh/cellNoise_map_segHcal_constNoiseLevel.root",
                                        OutputLevel = DEBUG)
 # Create topo clusters
 from Configurables import CaloTopoClusterInputTool, CaloTopoCluster, TopoCaloNeighbours
@@ -272,7 +285,7 @@ createTopoInput = CaloTopoClusterInputTool("CreateTopoInput",
                                            hcalEndcapReadoutName = "",
                                            hcalFwdReadoutName = "",
                                            OutputLevel = DEBUG)
-createTopoInput.ecalBarrelCells.Path = "ECalBarrelCells"
+createTopoInput.ecalBarrelCells.Path = "ECalBarrelCellsRedo"
 createTopoInput.ecalEndcapCells.Path = "emptyCaloCells"
 createTopoInput.ecalFwdCells.Path = "emptyCaloCells"
 createTopoInput.hcalBarrelCells.Path = "HCalBarrelCellsForTopo"
@@ -332,6 +345,7 @@ out.AuditExecute = True
 
 list_of_algorithms = [podioinput,
                       rewriteHcal,
+                      recreateEcalBarrelCells,
                       createemptycells]
 
 if noise:
