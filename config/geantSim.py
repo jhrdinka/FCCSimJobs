@@ -41,7 +41,7 @@ print "seed: ", seed
 print "output name: ", output_name
 if simargs.singlePart:
     energy = simargs.energy
-    if flat:
+    if simargs.flat:
         energy = 'flat'
     etaMin = simargs.etaMin
     etaMax = simargs.etaMax

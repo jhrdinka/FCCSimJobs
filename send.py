@@ -150,7 +150,7 @@ if __name__=="__main__":
             job_type = "reco/topoClusters/noNoise"
         short_job_type = "recTopo"
     elif '--ntuple' in sys.argv:
-        default_options = '....' # TODO how ?
+        default_options = 'config/recPositions.py'
         job_type = "ntup"
         short_job_type = "ntup"
     else:
@@ -416,6 +416,9 @@ if __name__=="__main__":
             frun.write('%s --inName %s\n'%(common_fccsw_command, input_files[i]))
         if '--recPositions' in sys.argv:
             frun.write('python %s/Convert.py edm.root $JOBDIR/%s\n'%(current_dir,outfile))
+            frun.write('rm edm.root \n')
+        if '--ntuple' in sys.argv:
+            frun.write('python %s/Convert_Jan.py edm.root $JOBDIR/%s\n'%(current_dir,outfile))
             frun.write('rm edm.root \n')
         if '--recTopoClusters' in sys.argv:
             frun.write('python %s/Convert.py $JOBDIR/%s $JOBDIR/%s \n'%(current_dir,outfile,outfile+'_ntuple.root'))
