@@ -48,7 +48,7 @@ python send.py --physics --process Haa -n 10 -N 1 --lsf
 ```
 to send flat distributed energetic particles (from 10GeV to 1TeV) 
 ```
-python send.py --version v02_pre --singlePart --particle 11 -e 10 --flat -N 1 --lsf --queue 1nh --etaMin 0.36 --etaMax 0.36 --phiMax 0
+python send.py --version v02_pre --singlePart --particle 11 -e 10 --flat -n 100 -N 1 --lsf --queue 1nh --etaMin 0.36 --etaMax 0.36 --phiMax 0
 ```
 Reconstruction:
 
