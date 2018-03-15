@@ -131,6 +131,7 @@ if __name__=="__main__":
     jobTypeGroup.add_argument("--pileup", action='store_true', help="Analyse min bias events for pile-up noise per cell")
     jobTypeGroup.add_argument("--mergeMinBias", action='store_true', help="Merge min bias events for pile-up study")
     parser.add_argument("--noise", action='store_true', help="Add electronics noise")
+    parser.add_argument("--calibrate", action='store_true', help="Calibrate Topo-cluster")
 
     sim = False
     if '--recPositions' in sys.argv:
@@ -147,9 +148,15 @@ if __name__=="__main__":
     elif '--recTopoClusters' in sys.argv:
         default_options = 'config/recTopoClusters.py'
         if '--noise' in sys.argv:
-            job_type = "reco/topoClusters/electronicsNoise"        
+            if '--calibrate' in sys.argv:
+                job_type = "reco/topoClusters/electronicsNoise/calibrated" 
+            else:
+                job_type = "reco/topoClusters/electronicsNoise" 
         else:
-            job_type = "reco/topoClusters/noNoise"
+            if  '--calibrate' in sys.argv:
+                job_type = "reco/topoClusters/noNoise/calibrated"
+            else:
+                job_type = "reco/topoClusters/noNoise/calibrated"
         short_job_type = "recTopo"
     elif '--ntuple' in sys.argv:
         default_options = 'config/recPositions.py'
@@ -229,7 +236,11 @@ if __name__=="__main__":
     print 'FCCSim version: ',version
     magnetic_field = not args.bFieldOff
     b_field_str = "bFieldOn" if not args.bFieldOff else "bFieldOff"
-    num_events = args.numEvents if sim elif '--mergeMinBias' in sys.argv else -1 # if reconstruction is done use -1 to run over all events in file
+    num_events = args.numEvents 
+    if sim or '--mergeMinBias' in sys.argv:
+        num_events = args.numEvents 
+    else: 
+        num_events = -1 # if reconstruction is done use -1 to run over all events in file
     num_jobs = args.numJobs
     job_options = args.jobOptions
     output_path = args.output
@@ -430,7 +441,7 @@ if __name__=="__main__":
                 listOfInputFiles = []
                 # merge MinBias events for 10 input files
                 for index in xrange(1,10):
-                    if (i*10+10) > num_jobs:
+                    if (i*10+10) > len(input_files):
                         break
                     else: 
                         print str(input_files[int((i*10) + index)])
