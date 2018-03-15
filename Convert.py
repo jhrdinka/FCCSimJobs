@@ -15,6 +15,8 @@ ecalEndcap_decoder = Decoder("system:4,subsystem:1,type:3,subtype:3,layer:8,eta:
 hcalEndcap_decoder = Decoder("system:4,subsystem:1,type:3,subtype:3,layer:8,eta:10,phi:10")
 ecalFwd_decoder = Decoder("system:4,subsystem:1,type:3,subtype:3,layer:8,eta:11,phi:10")
 hcalFwd_decoder = Decoder("system:4,subsystem:1,type:3,subtype:3,layer:8,eta:11,phi:10")
+trackerBarrel_decoder = Decoder("system:4,layer:5,module:18,x:-15,z:-15")
+trackerEndcap_decoder = Decoder("system:4,posneg:1,disc:5,component:17,x:-15,z:-15")
 
 lastECalBarrelLayer = int(7)
 lastECalEndcapLayer = int(39)
@@ -269,6 +271,26 @@ for event in intree:
             rec_phi.push_back(position.Phi())
             rec_pt.push_back(c.core.energy*position.Unit().Perp())
             rec_layer.push_back(hcalFwd_decoder["layer"] + lastECalFwdLayer + 1)
+            rec_x.push_back(c.position.x/10.)
+            rec_y.push_back(c.position.y/10.)
+            rec_z.push_back(c.position.z/10.)
+            rec_detid.push_back(systemID(c.core.cellId))
+            E += c.core.energy
+            numHits += 1
+
+        for c in event.TrackerPositionedHits:
+            trackerBarrel_decoder.setValue(c.core.cellId)
+            trackerEndcap_decoder.setValue(c.core.cellId)
+            position = r.TVector3(c.position.x,c.position.y,c.position.z)
+            rec_ene.push_back(c.core.energy)
+            rec_eta.push_back(position.Eta())
+            rec_phi.push_back(position.Phi())
+            rec_pt.push_back(c.core.energy*position.Unit().Perp())
+            sysID = systemID(c.core.cellId)
+            if  sysID == 0 or sysID == 1
+                rec_layer.push_back(trackerBarrel_decoder["layer"])
+            else:
+                rec_layer.push_back(trackerEndcap_decoder["layer"])
             rec_x.push_back(c.position.x/10.)
             rec_y.push_back(c.position.y/10.)
             rec_z.push_back(c.position.z/10.)
