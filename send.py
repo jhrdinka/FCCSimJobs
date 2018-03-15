@@ -117,7 +117,7 @@ if __name__=="__main__":
 
     parser.add_argument("--bFieldOff", action='store_true', help="Switch OFF magnetic field (default: B field ON)")
 
-    parser.add_argument('-n','--numEvents', type=int, help='Number of simulation events per job', required='--recPositions' not in sys.argv and '--recSlidingWindow' not in sys.argv and '--recTopoClusters' not in sys.argv and '--ntuple' not in sys.argv)
+    parser.add_argument('-n','--numEvents', type=int, help='Number of simulation events per job', required='--recPositions' not in sys.argv and '--recSlidingWindow' not in sys.argv and '--recTopoClusters' not in sys.argv and '--ntuple' not in sys.argv and '--pileup' not in sys.argv and '--mergeMinBias' not in sys.argv)
     parser.add_argument('-N','--numJobs', type=int, default = 10, help='Number of jobs to submit')
     parser.add_argument('-o','--output', type=str, help='Path of the output on EOS', default="/eos/experiment/fcc/hh/simulation/samples/")
     parser.add_argument('-l','--log', type=str, help='Path of the logs', default = "BatchOutputs/")
@@ -128,6 +128,8 @@ if __name__=="__main__":
     jobTypeGroup.add_argument("--recSlidingWindow", action='store_true', help="Reconstruction with sliding window")
     jobTypeGroup.add_argument("--recTopoClusters", action='store_true', help="Reconstruction with topo-clusters")
     jobTypeGroup.add_argument("--ntuple", action='store_true', help="Conversion to ntuple")
+    jobTypeGroup.add_argument("--pileup", action='store_true', help="Analyse min bias events for pile-up noise per cell")
+    jobTypeGroup.add_argument("--mergeMinBias", action='store_true', help="Merge min bias events for pile-up study")
     parser.add_argument("--noise", action='store_true', help="Add electronics noise")
 
     sim = False
@@ -153,6 +155,14 @@ if __name__=="__main__":
         default_options = 'config/recPositions.py'
         job_type = "ntup"
         short_job_type = "ntup"
+    elif '--pileup' in sys.argv:
+        default_options = 'config/recPileupNoisePerCell.py'
+        job_type = "ana/pileup"
+        short_job_type = "pileup"
+    elif '--mergeMinBias' in sys.argv:
+        default_options = 'config/mergeMinBias.py'
+        job_type = "ana/merged" 
+        short_job_type = "mergeMinBias"
     else:
         default_options = 'config/geantSim.py'
         job_type = "simu"
@@ -219,7 +229,7 @@ if __name__=="__main__":
     print 'FCCSim version: ',version
     magnetic_field = not args.bFieldOff
     b_field_str = "bFieldOn" if not args.bFieldOff else "bFieldOff"
-    num_events = args.numEvents if sim else -1 # if reconstruction is done use -1 to run over all events in file
+    num_events = args.numEvents if sim elif '--mergeMinBias' in sys.argv else -1 # if reconstruction is done use -1 to run over all events in file
     num_jobs = args.numJobs
     job_options = args.jobOptions
     output_path = args.output
@@ -323,7 +333,7 @@ if __name__=="__main__":
         print card
         print os.path.isfile(card)
 
-
+    # number of jobs is number of files
     for i in xrange(num_jobs):
         if sim:
             seed = int(datetime.utcnow().strftime('%Y%m%d%H%M%S%f')[:-3])
@@ -412,8 +422,22 @@ if __name__=="__main__":
                     frun.write('%s  --singlePart --particle %i -e %i --etaMin %f --etaMax %f --phiMin %f --phiMax %f\n'%(common_fccsw_command, pdg, energy, etaMin, etaMax, phiMin, phiMax))
                 
         else:
-            frun.write('cd $JOBDIR\n')
-            frun.write('%s --inName %s\n'%(common_fccsw_command, input_files[i]))
+            if not '--mergeMinBias' in sys.argv:
+                frun.write('cd $JOBDIR\n')
+                frun.write('%s --inName %s\n'%(common_fccsw_command, input_files[i]))
+            else:
+                frun.write('cd $JOBDIR\n')
+                listOfInputFiles = []
+                # merge MinBias events for 10 input files
+                for index in xrange(1,10):
+                    if (i*10+10) > num_jobs:
+                        break
+                    else: 
+                        print str(input_files[int((i*10) + index)])
+                        listOfInputFiles.append(str(input_files[int((i*10) + index)]))
+                        
+                frun.write('%s --inNames %s\n'%(common_fccsw_command, listOfInputFiles))
+           
         if '--recPositions' in sys.argv:
             frun.write('python %s/Convert.py edm.root $JOBDIR/%s\n'%(current_dir,outfile))
             frun.write('rm edm.root \n')
@@ -421,12 +445,18 @@ if __name__=="__main__":
             frun.write('python %s/Convert_Jan.py edm.root $JOBDIR/%s\n'%(current_dir,outfile))
             frun.write('rm edm.root \n')
         if '--recTopoClusters' in sys.argv:
+            frun.write('python /afs/cern.ch/work/h/helsens/public/FCCutils/eoscopy.py $JOBDIR/calibrateCluster_histograms.root %s_calibHistos.root\n'%( outdir+os.path.basename(outfile) ))
             frun.write('python %s/Convert.py $JOBDIR/%s $JOBDIR/%s \n'%(current_dir,outfile,outfile+'_ntuple.root'))
             frun.write('python /afs/cern.ch/work/h/helsens/public/FCCutils/eoscopy.py $JOBDIR/%s %s\n'%(outfile+'_ntuple.root',outdir))
+        if '--pileup' in sys.argv:
+            frun.write('python /afs/cern.ch/work/h/helsens/public/FCCutils/eoscopy.py $JOBDIR/%s %s\n'%(outfile,outdir))
+        if '--mergeMinBias' in sys.argv:
+            frun.write('python /afs/cern.ch/work/h/helsens/public/FCCutils/eoscopy.py $JOBDIR/output_pileupOverlay.root %s_merged_%sev.root\n'%( outdir+os.path.basename(outfile), num_events ))
+            
         frun.write('python /afs/cern.ch/work/h/helsens/public/FCCutils/eoscopy.py $JOBDIR/%s %s\n'%(outfile,outdir))
         frun.write('rm $JOBDIR/%s \n'%(outfile))
         frun.close()
-
+       
         if args.lsf:
             cmdBatch="bsub -M 4000000 -R \"pool=40000\" -q %s -cwd%s %s" %(queue, logdir,logdir+'/'+frunname)
             batchid=-1
