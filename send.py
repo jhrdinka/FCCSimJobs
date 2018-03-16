@@ -1,7 +1,7 @@
-path_to_INIT = '/cvmfs/fcc.cern.ch/sw/0.8.3/init_fcc_stack.sh'
+path_to_INIT = '/cvmfs/fcc.cern.ch/sw/views/releases/0.9.1/x86_64-slc6-gcc62-opt/setup.sh'
 path_to_LHE = '/afs/cern.ch/work/h/helsens/public/FCCsoft/FlatGunLHEventProducer/'
-path_to_FCCSW = '/cvmfs/fcc.cern.ch/sw/0.8.3/fccsw/0.8.3/x86_64-slc6-gcc62-opt/'
-version = 'v01'
+path_to_FCCSW = '/cvmfs/fcc.cern.ch/sw/releases/0.9.1/x86_64-slc6-gcc62-opt/linux-scientificcernslc6-x86_64/gcc-6.2.0/fccsw-0.9.1-c5dqdyv4gt5smfxxwoluqj2pjrdqvjuj'
+version = 'v02'
 import glob, os, sys,subprocess,cPickle
 import commands
 import time
@@ -116,11 +116,14 @@ if __name__=="__main__":
     parser.add_argument('--version', type=str, default = "v01", help='Specify the version of FCCSimJobs')
 
     parser.add_argument("--bFieldOff", action='store_true', help="Switch OFF magnetic field (default: B field ON)")
+    parser.add_argument("--pythiaSmearVertex", action='store_true', help="Write vertex smearing parameters to pythia config file")
+    parser.add_argument("--no_eoscopy", action='store_true',  help="DON'T copy result files to eos")
 
     parser.add_argument('-n','--numEvents', type=int, help='Number of simulation events per job', required='--recPositions' not in sys.argv and '--recSlidingWindow' not in sys.argv and '--recTopoClusters' not in sys.argv and '--ntuple' not in sys.argv and '--pileup' not in sys.argv and '--mergeMinBias' not in sys.argv)
     parser.add_argument('-N','--numJobs', type=int, default = 10, help='Number of jobs to submit')
     parser.add_argument('-o','--output', type=str, help='Path of the output on EOS', default="/eos/experiment/fcc/hh/simulation/samples/")
     parser.add_argument('-l','--log', type=str, help='Path of the logs', default = "BatchOutputs/")
+
 
     jobTypeGroup = parser.add_mutually_exclusive_group() # Type of job: simulation or reconstruction
     jobTypeGroup.add_argument("--sim", action='store_true', help="Simulation (default)")
@@ -130,8 +133,11 @@ if __name__=="__main__":
     jobTypeGroup.add_argument("--ntuple", action='store_true', help="Conversion to ntuple")
     jobTypeGroup.add_argument("--pileup", action='store_true', help="Analyse min bias events for pile-up noise per cell")
     jobTypeGroup.add_argument("--mergeMinBias", action='store_true', help="Merge min bias events for pile-up study")
+    jobTypeGroup.add_argument("--trackerPerformance", action='store_true', help="Tracker-only performance studies")
     parser.add_argument("--noise", action='store_true', help="Add electronics noise")
     parser.add_argument("--calibrate", action='store_true', help="Calibrate Topo-cluster")
+
+    parser.add_argument("--tripletTracker", action="store_true", help="Use triplet tracker layout instead of baseline")
 
     sim = False
     if '--recPositions' in sys.argv:
@@ -170,6 +176,15 @@ if __name__=="__main__":
         default_options = 'config/mergeMinBias.py'
         job_type = "ana/merged" 
         short_job_type = "mergeMinBias"
+    elif '--trackerPerformance' in sys.argv:
+        default_options = 'config/geantSim_trackerPerformance.py'
+        sim = True
+        if "--tripletTracker" in sys.argv:
+          job_type="simu/trkPerf_triplet"
+          short_job_type = "sim"
+        else:
+          job_type="simu/trkPerf_v3_03"
+          short_job_type = "sim"
     else:
         default_options = 'config/geantSim.py'
         job_type = "simu"
@@ -206,6 +221,7 @@ if __name__=="__main__":
     batchGroup = parser.add_mutually_exclusive_group(required = True) # Where to submit jobs
     batchGroup.add_argument("--lsf", action='store_true', help="Submit with LSF")
     batchGroup.add_argument("--condor", action='store_true', help="Submit with condor")
+    batchGroup.add_argument("--no_submit", action='store_true', help="Just generate scripts without submitting")
 
     lsfGroup = parser.add_argument_group('Pythia','Common for min bias and LHE')
     lsfGroup.add_argument('-q', '--queue', type=str, default='8nh', help='lxbatch queue (default: 8nh)')
@@ -289,7 +305,7 @@ if __name__=="__main__":
         print "==           PHYSICS           ==="
         print "=================================="
         process = args.process
-        print "proceess: ", process
+        print "process: ", process
         job_dir = "physics/" + process + "/" + b_field_str + "/"
         if process in lhe_physics:
             LHE = True
@@ -315,7 +331,7 @@ if __name__=="__main__":
     nbjobsSub=0
 
     # first make sure the output path for root files exists
-    outdir = output_path + "/"+version+"/" + job_dir + "/" + job_type + "/"
+    outdir = os.path.join( output_path, version, job_dir, job_type)
     print "Output will be stored in ... ", outdir
     if not sim:
         inputID = version+"/" + job_dir + "/simu"
@@ -398,6 +414,8 @@ if __name__=="__main__":
         print '-------------------------------------'
         print common_fccsw_command
         print '-------------------------------------'
+        if args.tripletTracker:
+          common_fccsw_command += '--tripletTracker'
         if sim:
             if args.physics:
                 frun.write('cp %s $JOBDIR/card.cmd\n'%(card))
@@ -423,6 +441,12 @@ if __name__=="__main__":
                     frun.write('echo "Beams:LHEF = $JOBDIR/events.lhe" >> $JOBDIR/card.cmd\n')
                 # run FCCSW using Pythia as generator
                 frun.write('cd $JOBDIR\n')
+                if args.pythiaSmearVertex:
+                  frun.write('echo "Beams:allowVertexSpread = on" >> $JOBDIR/card.cmd\n')
+                  frun.write('echo "Beams:sigmaVertexX = 0.5" >> $JOBDIR/card.cmd\n')
+                  frun.write('echo "Beams:sigmaVertexY = 0.5" >> $JOBDIR/card.cmd\n')
+                  frun.write('echo "Beams:sigmaVertexZ = 40.0" >> $JOBDIR/card.cmd\n')
+                  frun.write('echo "Beams:sigmaTime = 0.180" >> $JOBDIR/card.cmd\n')
                 frun.write('%s  --pythia --card $JOBDIR/card.cmd \n'%(common_fccsw_command))
             else:
                 # run single particles
@@ -472,6 +496,9 @@ if __name__=="__main__":
             cmdBatch="bsub -M 4000000 -R \"pool=40000\" -q %s -cwd%s %s" %(queue, logdir,logdir+'/'+frunname)
             batchid=-1
             job,batchid=SubmitToLsf(cmdBatch,10)
+        elif args.no_submit:
+            job = 0
+            print "scripts generated in ", os.path.join(logdir, frunname),
         else:
             os.system("mkdir -p %s/out"%logdir)
             os.system("mkdir -p %s/log"%logdir)

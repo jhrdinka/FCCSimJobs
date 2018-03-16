@@ -4,3 +4,5 @@ LSFJOB_*
 *~
 *.pyc
 *.root
+LSFJOB*
+BatchOutputs

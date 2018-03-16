@@ -31,7 +31,7 @@ Various options are available and are explained below.
    - the batch system is either **--lsf**  or **--condor**
    - the number of events per job is configured through **-n**
    - and the number of jobs to send is configured through **-N**
-   
+
 4. The default FCC Software verson is 8.3 taken from /cvmfs/fcc.cern.ch/sw/0.8.3/fccsw/0.8.3/x86_64-slc6-gcc62-opt/
    - the **--local** option allows to initialize local SW installation, add your path in inits/private.py script
    - the cell positions reconstruction is running only on local SW installation (/afs/cern.ch/work/c/cneubuse/public/CaloCellPositions/FCCSW/), to use this add **--local inits/CellPositions.py**
