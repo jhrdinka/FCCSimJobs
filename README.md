@@ -46,6 +46,10 @@ python send.py --singlePart --particle -211 -e 10 -n 10 -N 1 --condor
 python send.py --physics --process Zqq --pt 1000 -n 10 -N 1 --lsf
 python send.py --physics --process Haa -n 10 -N 1 --lsf
 ```
+to send flat distributed energetic particles (from 10GeV to 1TeV) 
+```
+python send.py --version v02_pre --singlePart --particle 11 -e 10 --flat -n 100 -N 1 --lsf --queue 1nh --etaMin 0.36 --etaMax 0.36 --phiMax 0
+```
 Reconstruction:
 
 ```
@@ -54,6 +58,7 @@ python send.py --singlePart --particle -211 -e 10 -N 1 --condor --recSlidingWind
 python send.py --physics --process Zqq --pt 1000 -N 1 --lsf --recSlidingWindow
 python send.py --physics --process Haa  -N 1 --lsf --recSlidingWindow
 python send.py --local inits/CellPositions.py --singlePart --particle 11 -e 100 -N 1 --condor --recPositions
+python send.py --version v02_pre --local inits/CellPositions.py --singlePart --particle 11 -e 10 --flat -N 1 --lsf --queue 1nh --etaMin 0.36 --etaMax 0.36 --phiMax 0 --ntuple
 ```
 
 5. Also, please often check the afs directory where the jobs where send, because there will be the log files stored there as well as the output root file when running on condor (needs to be understood)

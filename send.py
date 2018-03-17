@@ -119,7 +119,7 @@ if __name__=="__main__":
     parser.add_argument("--pythiaSmearVertex", action='store_true', help="Write vertex smearing parameters to pythia config file")
     parser.add_argument("--no_eoscopy", action='store_true',  help="DON'T copy result files to eos")
 
-    parser.add_argument('-n','--numEvents', type=int, help='Number of simulation events per job', required='--recPositions' not in sys.argv and '--recSlidingWindow' not in sys.argv and '--recTopoClusters' not in sys.argv and '--ntuple' not in sys.argv)
+    parser.add_argument('-n','--numEvents', type=int, help='Number of simulation events per job', required='--recPositions' not in sys.argv and '--recSlidingWindow' not in sys.argv and '--recTopoClusters' not in sys.argv and '--ntuple' not in sys.argv and '--pileup' not in sys.argv and '--mergeMinBias' not in sys.argv)
     parser.add_argument('-N','--numJobs', type=int, default = 10, help='Number of jobs to submit')
     parser.add_argument('-o','--output', type=str, help='Path of the output on EOS', default="/eos/experiment/fcc/hh/simulation/samples/")
     parser.add_argument('-l','--log', type=str, help='Path of the logs', default = "BatchOutputs/")
@@ -132,7 +132,10 @@ if __name__=="__main__":
     jobTypeGroup.add_argument("--recTopoClusters", action='store_true', help="Reconstruction with topo-clusters")
     jobTypeGroup.add_argument("--ntuple", action='store_true', help="Conversion to ntuple")
     jobTypeGroup.add_argument("--trackerPerformance", action='store_true', help="Tracker-only performance studies")
+    jobTypeGroup.add_argument("--pileup", action='store_true', help="Analyse min bias events for pile-up noise per cell")
+    jobTypeGroup.add_argument("--mergeMinBias", action='store_true', help="Merge min bias events for pile-up study")
     parser.add_argument("--noise", action='store_true', help="Add electronics noise")
+    parser.add_argument("--calibrate", action='store_true', help="Calibrate Topo-cluster")
 
     parser.add_argument("--tripletTracker", action="store_true", help="Use triplet tracker layout instead of baseline")
 
@@ -150,10 +153,19 @@ if __name__=="__main__":
         short_job_type = "recWin"
     elif '--recTopoClusters' in sys.argv:
         default_options = 'config/recTopoClusters.py'
-        job_type = "reco/topoClusters"
+        if '--noise' in sys.argv:
+            if '--calibrate' in sys.argv:
+                job_type = "reco/topoClusters/electronicsNoise/calibrated" 
+            else:
+                job_type = "reco/topoClusters/electronicsNoise" 
+        else:
+            if  '--calibrate' in sys.argv:
+                job_type = "reco/topoClusters/noNoise/calibrated"
+            else:
+                job_type = "reco/topoClusters/noNoise/calibrated"
         short_job_type = "recTopo"
     elif '--ntuple' in sys.argv:
-        default_options = '....' # TODO how ?
+        default_options = 'config/recPositions.py'
         job_type = "ntup"
         short_job_type = "ntup"
     elif '--trackerPerformance' in sys.argv:
@@ -165,6 +177,14 @@ if __name__=="__main__":
         else:
           job_type="simu/trkPerf_v3_03"
           short_job_type = "sim"
+    elif '--pileup' in sys.argv:
+        default_options = 'config/recPileupNoisePerCell.py'
+        job_type = "ana/pileup"
+        short_job_type = "pileup"
+    elif '--mergeMinBias' in sys.argv:
+        default_options = 'config/mergeMinBias.py'
+        job_type = "ana/merged" 
+        short_job_type = "mergeMinBias"
     else:
         default_options = 'config/geantSim.py'
         job_type = "simu"
@@ -186,6 +206,7 @@ if __name__=="__main__":
     singlePartGroup.add_argument('--phiMin', type=float, default=0, help='Minimal azimuthal angle')
     singlePartGroup.add_argument('--phiMax', type=float, default=2*pi, help='Maximal azimuthal angle')
     singlePartGroup.add_argument('--particle', type=int,  required = '--singlePart' in sys.argv, help='Particle type (PDG)')
+    singlePartGroup.add_argument('--flat', action='store_true', help='flat energy distribution for single particle generation')
 
     physicsGroup = parser.add_argument_group('Physics','Physics process')
     lhe_physics = ["ljets","top","Wqq","Zqq","Hbb"]
@@ -231,7 +252,11 @@ if __name__=="__main__":
     print 'FCCSim version: ',version
     magnetic_field = not args.bFieldOff
     b_field_str = "bFieldOn" if not args.bFieldOff else "bFieldOff"
-    num_events = args.numEvents if sim else -1 # if reconstruction is done use -1 to run over all events in file
+    num_events = args.numEvents 
+    if sim or '--mergeMinBias' in sys.argv:
+        num_events = args.numEvents 
+    else: 
+        num_events = -1 # if reconstruction is done use -1 to run over all events in file
     num_jobs = args.numJobs
     job_options = args.jobOptions
     output_path = args.output
@@ -246,6 +271,7 @@ if __name__=="__main__":
         etaMax = args.etaMax
         phiMin = args.phiMin
         phiMax = args.phiMax
+        flat = args.flat
         pdg = args.particle
         particle_human_names = {11: 'electron', -11: 'positron', -13: 'mup', 13: 'mum', 22: 'photon', 111: 'pi0', 211: 'pip', -211: 'pim', 130: "K0L"}
         print "=================================="
@@ -270,7 +296,10 @@ if __name__=="__main__":
             print "phi: from ", phiMin, " to ", phiMax
             if not(phiMin == 0 and phiMax == 2*pi):
                 eta_str += "_phiFrom" + str(decimal.Decimal(str(phiMin)).normalize()).replace('-','M') + "To" + str(decimal.Decimal(str(phiMax)).normalize()).replace('-','M')
-        job_dir = os.path.join("singlePart", particle_human_names[pdg], b_field_str, eta_str, str(energy) + "GeV")
+        if flat:
+            job_dir = "singlePart/" + particle_human_names[pdg] + "/" + b_field_str + "/" + eta_str + "/flat"
+        else:
+            job_dir = "singlePart/" + particle_human_names[pdg] + "/" + b_field_str + "/" + eta_str + "/" + str(energy) + "GeV/"
     elif args.physics:
         print "=================================="
         print "==           PHYSICS           ==="
@@ -331,7 +360,7 @@ if __name__=="__main__":
         print card
         print os.path.isfile(card)
 
-
+    # number of jobs is number of files
     for i in xrange(num_jobs):
         if sim:
             seed = int(datetime.utcnow().strftime('%Y%m%d%H%M%S%f')[:-3])
@@ -425,18 +454,47 @@ if __name__=="__main__":
             else:
                 # run single particles
                 frun.write('cd $JOBDIR\n')
-                frun.write('%s  --singlePart --particle %i -e %i --etaMin %f --etaMax %f --phiMin %f --phiMax %f\n'%(common_fccsw_command, pdg, energy, etaMin, etaMax, phiMin, phiMax))
+                if flat:
+                    frun.write('%s  --singlePart --particle %i -e %i --etaMin %f --etaMax %f --phiMin %f --phiMax %f --flat \n'%(common_fccsw_command, pdg, energy, etaMin, etaMax, phiMin, phiMax))
+                else:
+                    frun.write('%s  --singlePart --particle %i -e %i --etaMin %f --etaMax %f --phiMin %f --phiMax %f\n'%(common_fccsw_command, pdg, energy, etaMin, etaMax, phiMin, phiMax))
+                
         else:
-            frun.write('cd $JOBDIR\n')
-            frun.write('%s --inName %s\n'%(common_fccsw_command, input_files[i]))
+            if not '--mergeMinBias' in sys.argv:
+                frun.write('cd $JOBDIR\n')
+                frun.write('%s --inName %s\n'%(common_fccsw_command, input_files[i]))
+            else:
+                frun.write('cd $JOBDIR\n')
+                listOfInputFiles = []
+                # merge MinBias events for 10 input files
+                for index in xrange(1,10):
+                    if (i*10+10) > len(input_files):
+                        break
+                    else: 
+                        print str(input_files[int((i*10) + index)])
+                        listOfInputFiles.append(str(input_files[int((i*10) + index)]))
+                        
+                frun.write('%s --inNames %s\n'%(common_fccsw_command, listOfInputFiles))
+           
         if '--recPositions' in sys.argv:
             frun.write('python %s/Convert.py edm.root $JOBDIR/%s\n'%(current_dir,outfile))
             frun.write('rm edm.root \n')
-        if not args.no_eoscopy:
-          frun.write('python /afs/cern.ch/work/h/helsens/public/FCCutils/eoscopy.py $JOBDIR/%s %s\n'%(outfile,outdir))
-          frun.write('rm $JOBDIR/%s \n'%(outfile))
+        if '--ntuple' in sys.argv:
+            frun.write('python %s/Convert_Jan.py edm.root $JOBDIR/%s\n'%(current_dir,outfile))
+            frun.write('rm edm.root \n')
+        if '--recTopoClusters' in sys.argv:
+            frun.write('python /afs/cern.ch/work/h/helsens/public/FCCutils/eoscopy.py $JOBDIR/calibrateCluster_histograms.root %s_calibHistos.root\n'%( outdir+os.path.basename(outfile) ))
+            frun.write('python %s/Convert.py $JOBDIR/%s $JOBDIR/%s \n'%(current_dir,outfile,outfile+'_ntuple.root'))
+            frun.write('python /afs/cern.ch/work/h/helsens/public/FCCutils/eoscopy.py $JOBDIR/%s %s\n'%(outfile+'_ntuple.root',outdir))
+        if '--pileup' in sys.argv:
+            frun.write('python /afs/cern.ch/work/h/helsens/public/FCCutils/eoscopy.py $JOBDIR/%s %s\n'%(outfile,outdir))
+        if '--mergeMinBias' in sys.argv:
+            frun.write('python /afs/cern.ch/work/h/helsens/public/FCCutils/eoscopy.py $JOBDIR/output_pileupOverlay.root %s_merged_%sev.root\n'%( outdir+os.path.basename(outfile), num_events ))
+            
+        frun.write('python /afs/cern.ch/work/h/helsens/public/FCCutils/eoscopy.py $JOBDIR/%s %s\n'%(outfile,outdir))
+        frun.write('rm $JOBDIR/%s \n'%(outfile))
         frun.close()
-
+       
         if args.lsf:
             cmdBatch="bsub -M 4000000 -R \"pool=40000\" -q %s -cwd%s %s" %(queue, logdir,logdir+'/'+frunname)
             batchid=-1

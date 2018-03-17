@@ -21,6 +21,7 @@ singlePartGroup.add_argument('--etaMax', type=float, default=0., help='Maximal p
 singlePartGroup.add_argument('--phiMin', type=float, default=0, help='Minimal azimuthal angle')
 singlePartGroup.add_argument('--phiMax', type=float, default=2*pi, help='Maximal azimuthal angle')
 singlePartGroup.add_argument('--particle', type=int, required='--singlePart' in sys.argv, help='Particle type (PDG)')
+singlePartGroup.add_argument('--flat', action='store_true', help='flat energy distribution for single particle generation')
 
 pythiaGroup = simparser.add_argument_group('Pythia','Common for min bias and LHE')
 pythiaGroup.add_argument('-c', '--card', type=str, default='Generation/data/Pythia_minbias_pp_100TeV.cmd', help='Path to Pythia card (default: PythiaCards/default.cmd)')
@@ -34,12 +35,15 @@ magnetic_field = not simargs.bFieldOff
 num_events = simargs.numEvents
 seed = simargs.seed
 output_name = simargs.outName
+flat = simargs.flat
 print "B field: ", magnetic_field
 print "number of events = ", num_events
 print "seed: ", seed
 print "output name: ", output_name
 if simargs.singlePart:
     energy = simargs.energy
+    if simargs.flat:
+        energy = 'flat'
     etaMin = simargs.etaMin
     etaMax = simargs.etaMax
     phiMin = simargs.phiMin
@@ -161,10 +165,18 @@ geantsim = SimG4Alg("SimG4Alg", outputs = outputHitsTools)
 
 if simargs.singlePart:
     from Configurables import SimG4SingleParticleGeneratorTool
-    pgun=SimG4SingleParticleGeneratorTool("SimG4SingleParticleGeneratorTool", saveEdm=True,
-                                          particleName=particle_geant_names[pdg], energyMin=energy * 1000, energyMax=energy * 1000,
-                                          etaMin=etaMin, etaMax=etaMax, phiMin = phiMin, phiMax = phiMax)
-    geantsim.eventProvider = pgun
+    if simargs.flat:
+        pgun=SimG4SingleParticleGeneratorTool("SimG4SingleParticleGeneratorTool", saveEdm=True,
+                                              particleName=particle_geant_names[pdg],
+                                              energyMin=10 * 1000, energyMax=1000 * 1000, # flat energy from 10GeV to 1TeV
+                                              etaMin=etaMin, etaMax=etaMax, phiMin = phiMin, phiMax = phiMax)
+        geantsim.eventProvider = pgun
+    else:
+        pgun=SimG4SingleParticleGeneratorTool("SimG4SingleParticleGeneratorTool", saveEdm=True,
+                                              particleName=particle_geant_names[pdg], 
+                                              energyMin=energy * 1000, energyMax=energy * 1000,
+                                              etaMin=etaMin, etaMax=etaMax, phiMin = phiMin, phiMax = phiMax)
+        geantsim.eventProvider = pgun
 else:
     from Configurables import PythiaInterface, GenAlg, GaussSmearVertex
     smeartool = GaussSmearVertex("GaussSmearVertex")
