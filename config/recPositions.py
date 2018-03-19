@@ -21,7 +21,7 @@ from Gaudi.Configuration import *
 ##############################################################################################################
 #######                                         GEOMETRY                                         #############
 ##############################################################################################################
-path_to_detector = '/afs/cern.ch/work/c/cneubuse/public/CaloCellPositions/FCCSW/'
+path_to_detector = '/afs/cern.ch/work/c/cneubuse/public/TopoClusters/FCCSW/'
 #'/afs/cern.ch/work/h/helsens/public/FCCsoft/FCCSW-0.8.3/'
 detectors_to_use=[path_to_detector+'/Detector/DetFCChhBaseline1/compact/FCChh_DectEmptyMaster.xml',
                   path_to_detector+'/Detector/DetFCChhTrackerTkLayout/compact/Tracker.xml',
@@ -43,10 +43,8 @@ ecalBarrelReadoutNamePhiEta = "ECalBarrelPhiEta"
 ecalEndcapReadoutName = "EMECPhiEtaReco"
 ecalFwdReadoutName = "EMFwdPhiEtaReco"
 # HCAL readouts
-hcalBarrelReadoutName = "BarHCal_Readout"
-hcalBarrelReadoutVolume = "HCalBarrel"
-hcalExtBarrelReadoutName = "ExtBarHCal_Readout"
-hcalExtBarrelReadoutVolume = "HCalExtBarrel"
+hcalBarrelReadoutName = "HCalBarrelReadout"
+hcalExtBarrelReadoutName = "HCalExtBarrelReadout"
 hcalEndcapReadoutName = "HECPhiEtaReco"
 hcalFwdReadoutName = "HFwdPhiEtaReco"
 # Tail Catcher readout
@@ -60,14 +58,14 @@ podioevent = FCCDataSvc("EventDataSvc", input=input_name)
 
 podioinput = PodioInput("PodioReader", collections = ["ECalBarrelCells", "HCalBarrelCells", "HCalExtBarrelCells", "ECalEndcapCells", "HCalEndcapCells", "ECalFwdCells", "HCalFwdCells", "TailCatcherCells","GenParticles","GenVertices"], OutputLevel = DEBUG)
 
-##############################################################################################################                                                                                                                                
-#######                                       RECALIBRATE ECAL                                   #############                                                                                                                                
-##############################################################################################################                                                                                                                                
+##############################################################################################################
+#######                                       RECALIBRATE ECAL                                   #############
+##############################################################################################################
 
 from Configurables import CalibrateInLayersTool, CreateCaloCells
 recalibEcalBarrel = CalibrateInLayersTool("RecalibrateEcalBarrel",
                                           samplingFraction = [0.299654475899/0.12125] + [0.148166996525/0.14283] + [0.163005489744/0.16354] + [0.176907220821/0.17662] + [0.189980731321/0.18867] + [0.202201963561/0.19890] + [0.214090761907/0.20637] + [0.224706564289/0.20802],
-                                          readoutName = ecalBarrelReadoutName,
+                                          readoutName = ecalBarrelReadoutNamePhiEta,
                                           layerFieldName = "layer")
 recreateEcalBarrelCells = CreateCaloCells("redoEcalBarrelCells",
                                           doCellCalibration=True,
@@ -81,75 +79,75 @@ recreateEcalBarrelCells.cells.Path="ECalBarrelCellsRedo"
 ##############################################################################################################
 
 #Configure tools for calo cell positions
-from Configurables import CellPositionsECalBarrelTool, CellPositionsHCalBarrelTool, CellPositionsCaloDiscsTool, CellPositionsCaloDiscsTool, CellPositionsTailCatcherTool 
-ECalBcells = CellPositionsECalBarrelTool("CellPositionsECalBarrel", 
-                                    readoutName = ecalBarrelReadoutNamePhiEta, 
-                                    OutputLevel = INFO)
-EMECcells = CellPositionsCaloDiscsTool("CellPositionsEMEC", 
-                                    readoutName = ecalEndcapReadoutName, 
-                                    OutputLevel = INFO)
-ECalFwdcells = CellPositionsCaloDiscsTool("CellPositionsECalFwd", 
-                                        readoutName = ecalFwdReadoutName, 
-                                        OutputLevel = INFO)
-HCalBcells = CellPositionsHCalBarrelTool("CellPositionsHCalBarrel", 
-                                    readoutName = hcalBarrelReadoutName, 
-                                    OutputLevel = INFO)
-HCalExtBcells = CellPositionsHCalBarrelTool("CellPositionsHCalExtBarrel", 
-                                       readoutName = hcalExtBarrelReadoutName, 
+from Configurables import CellPositionsECalBarrelTool, CellPositionsHCalBarrelNoSegTool, CellPositionsCaloDiscsTool, CellPositionsCaloDiscsTool, CellPositionsTailCatcherTool
+ECalBcells = CellPositionsECalBarrelTool("CellPositionsECalBarrel",
+                                         readoutName = ecalBarrelReadoutNamePhiEta,
+                                         OutputLevel = INFO)
+EMECcells = CellPositionsCaloDiscsTool("CellPositionsEMEC",
+                                       readoutName = ecalEndcapReadoutName,
                                        OutputLevel = INFO)
-HECcells = CellPositionsCaloDiscsTool("CellPositionsHEC", 
-                                   readoutName = hcalEndcapReadoutName, 
-                                   OutputLevel = INFO)
-HCalFwdcells = CellPositionsCaloDiscsTool("CellPositionsHCalFwd", 
-                                        readoutName = hcalFwdReadoutName, 
-                                        OutputLevel = INFO)
-TailCatchercells = CellPositionsTailCatcherTool("CellPositionsTailCatcher", 
-                                                readoutName = tailCatcherReadoutName, 
+ECalFwdcells = CellPositionsCaloDiscsTool("CellPositionsECalFwd",
+                                          readoutName = ecalFwdReadoutName,
+                                          OutputLevel = INFO)
+HCalBcells = CellPositionsHCalBarrelNoSegTool("CellPositionsHCalBarrel",
+                                              readoutName = hcalBarrelReadoutName,
+                                              OutputLevel = INFO)
+HCalExtBcells = CellPositionsHCalBarrelNoSegTool("CellPositionsHCalExtBarrel",
+                                                 readoutName = hcalExtBarrelReadoutName,
+                                                 OutputLevel = INFO)
+HECcells = CellPositionsCaloDiscsTool("CellPositionsHEC",
+                                      readoutName = hcalEndcapReadoutName,
+                                      OutputLevel = INFO)
+HCalFwdcells = CellPositionsCaloDiscsTool("CellPositionsHCalFwd",
+                                          readoutName = hcalFwdReadoutName,
+                                          OutputLevel = INFO)
+TailCatchercells = CellPositionsTailCatcherTool("CellPositionsTailCatcher",
+                                                readoutName = tailCatcherReadoutName,
                                                 centralRadius = 901.5,
                                                 OutputLevel = INFO)
 
 # cell positions
 from Configurables import CreateCellPositions
-positionsEcalBarrel = CreateCellPositions("positionsEcalBarrel", 
-                                          positionsTool=ECalBcells, 
-                                          hits = "ECalBarrelCellsRedo", 
-                                          positionedHits = "ECalBarrelCellPositions", 
+positionsEcalBarrel = CreateCellPositions("positionsEcalBarrel",
+                                          positionsTool=ECalBcells,
+                                          hits = "ECalBarrelCellsRedo",
+                                          positionedHits = "ECalBarrelCellPositions",
                                           OutputLevel = INFO)
-positionsHcalBarrel = CreateCellPositions("positionsHcalBarrel", 
-                                          positionsTool=HCalBcells, 
-                                          hits = "HCalBarrelCells", 
-                                          positionedHits = "HCalBarrelCellPositions", 
+positionsHcalBarrel = CreateCellPositions("positionsHcalBarrel",
+                                          positionsTool=HCalBcells,
+                                          hits = "HCalBarrelCells",
+                                          positionedHits = "HCalBarrelCellPositions",
                                           OutputLevel = INFO)
-positionsHcalExtBarrel = CreateCellPositions("positionsHcalExtBarrel", 
-                                          positionsTool=HCalExtBcells, 
-                                          hits = "HCalExtBarrelCells", 
-                                          positionedHits = "HCalExtBarrelCellPositions", 
+positionsHcalExtBarrel = CreateCellPositions("positionsHcalExtBarrel",
+                                             positionsTool=HCalExtBcells,
+                                             hits = "HCalExtBarrelCells",
+                                             positionedHits = "HCalExtBarrelCellPositions",
+                                             OutputLevel = INFO)
+positionsEcalEndcap = CreateCellPositions("positionsEcalEndcap",
+                                          positionsTool=EMECcells,
+                                          hits = "ECalEndcapCells",
+                                          positionedHits = "ECalEndcapCellPositions",
                                           OutputLevel = INFO)
-positionsEcalEndcap = CreateCellPositions("positionsEcalEndcap", 
-                                          positionsTool=EMECcells, 
-                                          hits = "ECalEndcapCells", 
-                                          positionedHits = "ECalEndcapCellPositions", 
+positionsHcalEndcap = CreateCellPositions("positionsHcalEndcap",
+                                          positionsTool=HECcells,
+                                          hits = "HCalEndcapCells",
+                                          positionedHits = "HCalEndcapCellPositions",
                                           OutputLevel = INFO)
-positionsHcalEndcap = CreateCellPositions("positionsHcalEndcap", 
-                                          positionsTool=HECcells, 
-                                          hits = "HCalEndcapCells", 
-                                          positionedHits = "HCalEndcapCellPositions", 
-                                          OutputLevel = INFO)
-positionsEcalFwd = CreateCellPositions("positionsEcalFwd", 
-                                          positionsTool=ECalFwdcells, 
-                                          hits = "ECalFwdCells", 
-                                          positionedHits = "ECalFwdCellPositions", 
-                                          OutputLevel = INFO)
-positionsHcalFwd = CreateCellPositions("positionsHcalFwd", 
-                                          positionsTool=HCalFwdcells, 
-                                          hits = "HCalFwdCells", 
-                                          positionedHits = "HCalFwdCellPositions", 
-                                          OutputLevel = INFO)
-positionsTailCatcher = CreateCellPositions("positionsTailCatcher", 
-                                          positionsTool=TailCatchercells, 
-                                          hits = "TailCatcherCells", 
-                                          positionedHits = "TailCatcherCellPositions", 
-                                          OutputLevel = INFO)
+positionsEcalFwd = CreateCellPositions("positionsEcalFwd",
+                                       positionsTool=ECalFwdcells,
+                                       hits = "ECalFwdCells",
+                                       positionedHits = "ECalFwdCellPositions",
+                                       OutputLevel = INFO)
+positionsHcalFwd = CreateCellPositions("positionsHcalFwd",
+                                       positionsTool=HCalFwdcells,
+                                       hits = "HCalFwdCells",
+                                       positionedHits = "HCalFwdCellPositions",
+                                       OutputLevel = INFO)
+positionsTailCatcher = CreateCellPositions("positionsTailCatcher",
+                                           positionsTool=TailCatchercells,
+                                           hits = "TailCatcherCells",
+                                           positionedHits = "TailCatcherCellPositions",
+                                           OutputLevel = INFO)
 
 # PODIO algorithm
 out = PodioOutput("out", OutputLevel=DEBUG)
@@ -177,17 +175,17 @@ list_of_algorithms = [podioinput,
                       recreateEcalBarrelCells,
                       positionsEcalBarrel,
                       positionsEcalEndcap,
-                      positionsEcalFwd, 
-                      positionsHcalBarrel, 
-                      positionsHcalExtBarrel, 
-                      positionsHcalEndcap, 
+                      positionsEcalFwd,
+                      positionsHcalBarrel,
+                      positionsHcalExtBarrel,
+                      positionsHcalEndcap,
                       positionsHcalFwd,
                       positionsTailCatcher,
                       out]
 
 ApplicationMgr(
-    TopAlg = list_of_algorithms,
-    EvtSel = 'NONE',
-    EvtMax   = num_events,
-    ExtSvc = [geoservice, podioevent, audsvc],
-)
+               TopAlg = list_of_algorithms,
+               EvtSel = 'NONE',
+               EvtMax   = num_events,
+               ExtSvc = [geoservice, podioevent, audsvc],
+               )
