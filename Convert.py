@@ -15,6 +15,8 @@ ecalEndcap_decoder = Decoder("system:4,subsystem:1,type:3,subtype:3,layer:8,eta:
 hcalEndcap_decoder = Decoder("system:4,subsystem:1,type:3,subtype:3,layer:8,eta:10,phi:10")
 ecalFwd_decoder = Decoder("system:4,subsystem:1,type:3,subtype:3,layer:8,eta:11,phi:10")
 hcalFwd_decoder = Decoder("system:4,subsystem:1,type:3,subtype:3,layer:8,eta:11,phi:10")
+trackerBarrel_decoder = Decoder("system:4,layer:5,module:18,x:-15,z:-15")
+trackerEndcap_decoder = Decoder("system:4,posneg:1,disc:5,component:17,x:-15,z:-15")
 
 lastECalBarrelLayer = int(7)
 lastECalEndcapLayer = int(39)
@@ -50,6 +52,7 @@ gen_pt  = r.std.vector(float)()
 gen_energy = r.std.vector(float)()
 gen_pdgid = r.std.vector(float)()
 gen_status = r.std.vector(float)()
+gen_bits = r.std.vector(float)()
 
 cluster_eta = r.std.vector(float)()
 cluster_phi = r.std.vector(float)()
@@ -68,6 +71,7 @@ rec_y = r.std.vector(float)()
 rec_z = r.std.vector(float)()
 rec_layer = r.std.vector(int)()
 rec_detid = r.std.vector(int)()
+rec_bits = r.std.vector(float)()
 
 outfile=r.TFile(outfile_name,"recreate")
 outfile.mkdir('ana')
@@ -104,6 +108,7 @@ outtree.Branch("rechit_x", rec_x)
 outtree.Branch("rechit_y", rec_y)
 outtree.Branch("rechit_z", rec_z)
 outtree.Branch("rechit_detid", rec_detid)
+outtree.Branch("rechit_bits", rec_bits)
 
 outtree.Branch("gen_pt", gen_pt)
 outtree.Branch("gen_eta", gen_eta)
@@ -111,6 +116,7 @@ outtree.Branch("gen_phi", gen_phi)
 outtree.Branch("gen_energy", gen_energy)
 outtree.Branch("gen_status", gen_status)
 outtree.Branch("gen_pdgid", gen_pdgid)
+outtree.Branch("gen_bits", gen_bits)
 
 numEvent = 0
 for event in intree:
@@ -136,6 +142,7 @@ for event in intree:
             gen_eta.push_back(eta)
             gen_phi.push_back(phi)
             gen_energy.push_back(math.sqrt(g.core.p4.mass**2+g.core.p4.px**2+g.core.p4.py**2+g.core.p4.pz**2))
+            gen_bits.push_back(g.core.bits)
 
             if math.fabs(tlv.E()-math.sqrt(g.core.p4.mass**2+g.core.p4.px**2+g.core.p4.py**2+g.core.p4.pz**2))>0.01 and g.core.status==1:
                 print '=======================etlv  ',tlv.E(),'    ',math.sqrt(g.core.p4.mass**2+g.core.p4.px**2+g.core.p4.py**2+g.core.p4.pz**2),'  eta  ',eta,'   phi   ',phi,'  x  ',g.core.p4.px,'  y  ',g.core.p4.py,'  z  ',g.core.p4.pz
@@ -177,6 +184,7 @@ for event in intree:
             rec_y.push_back(c.position.y/10.)
             rec_z.push_back(c.position.z/10.)
             rec_detid.push_back(systemID(c.core.cellId))
+            rec_bits.push_back(c.core.bits)
             if hcalBarrel_decoder["layer"] == 0:
                 EhadFirst += c.core.energy
             E += c.core.energy
@@ -195,6 +203,7 @@ for event in intree:
             rec_y.push_back(c.position.y/10.)
             rec_z.push_back(c.position.z/10.)
             rec_detid.push_back(systemID(c.core.cellId))
+            rec_bits.push_back(c.core.bits)
             if ecalBarrel_decoder["layer"] == lastECalBarrelLayer:
                 EemLast += c.core.energy
             E += c.core.energy
@@ -213,6 +222,7 @@ for event in intree:
             rec_y.push_back(c.position.y/10.)
             rec_z.push_back(c.position.z/10.)
             rec_detid.push_back(systemID(c.core.cellId))
+            rec_bits.push_back(c.core.bits)
             E += c.core.energy
             numHits += 1
             
@@ -228,6 +238,7 @@ for event in intree:
             rec_y.push_back(c.position.y/10.)
             rec_z.push_back(c.position.z/10.)
             rec_detid.push_back(systemID(c.core.cellId))
+            rec_bits.push_back(c.core.bits)
             E += c.core.energy
             numHits += 1
 
@@ -243,6 +254,7 @@ for event in intree:
             rec_y.push_back(c.position.y/10.)
             rec_z.push_back(c.position.z/10.)
             rec_detid.push_back(systemID(c.core.cellId))
+            rec_bits.push_back(c.core.bits)
             E += c.core.energy
             numHits += 1
 
@@ -258,6 +270,7 @@ for event in intree:
             rec_y.push_back(c.position.y/10.)
             rec_z.push_back(c.position.z/10.)
             rec_detid.push_back(systemID(c.core.cellId))
+            rec_bits.push_back(c.core.bits)
             E += c.core.energy
             numHits += 1
 
@@ -273,6 +286,28 @@ for event in intree:
             rec_y.push_back(c.position.y/10.)
             rec_z.push_back(c.position.z/10.)
             rec_detid.push_back(systemID(c.core.cellId))
+            rec_bits.push_back(c.core.bits)
+            E += c.core.energy
+            numHits += 1
+
+        for c in event.TrackerPositionedHits:
+            trackerBarrel_decoder.setValue(c.core.cellId)
+            trackerEndcap_decoder.setValue(c.core.cellId)
+            position = r.TVector3(c.position.x,c.position.y,c.position.z)
+            rec_ene.push_back(c.core.energy)
+            rec_eta.push_back(position.Eta())
+            rec_phi.push_back(position.Phi())
+            rec_pt.push_back(c.core.energy*position.Unit().Perp())
+            sysID = systemID(c.core.cellId)
+            if  sysID == 0 or sysID == 1:
+                rec_layer.push_back(trackerBarrel_decoder["layer"])
+            else:
+            	rec_layer.push_back(trackerEndcap_decoder["layer"])
+            rec_x.push_back(c.position.x/10.)
+            rec_y.push_back(c.position.y/10.)
+            rec_z.push_back(c.position.z/10.)
+            rec_detid.push_back(systemID(c.core.cellId))
+            rec_bits.push_back(c.core.bits)
             E += c.core.energy
             numHits += 1
 
@@ -288,6 +323,7 @@ for event in intree:
     gen_energy.clear()
     gen_pdgid.clear()
     gen_status.clear()
+    gen_bits.clear()
 
     cluster_eta.clear()
     cluster_phi.clear()
@@ -306,6 +342,7 @@ for event in intree:
     rec_y.clear()
     rec_z.clear()
     rec_detid.clear()
+    rec_bits.clear()
     
     numEvent += 1
 
