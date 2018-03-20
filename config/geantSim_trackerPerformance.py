@@ -111,8 +111,15 @@ from Configurables import SimG4FullSimActions
 actions = SimG4FullSimActions()
 actions.enableHistory=True
 
+# Magnetic field
+from Configurables import SimG4ConstantMagneticFieldTool
+if magnetic_field:
+    field = SimG4ConstantMagneticFieldTool("bField", FieldOn=True, FieldZMax=20*units.m, IntegratorStepper="ClassicalRK4")
+else:
+    field = SimG4ConstantMagneticFieldTool("bField", FieldOn=False)
+
 from Configurables import SimG4Svc
-geantservice = SimG4Svc("SimG4Svc", detector='SimG4DD4hepDetector', physicslist="SimG4FtfpBert", actions=actions)
+geantservice = SimG4Svc("SimG4Svc", detector='SimG4DD4hepDetector', physicslist="SimG4FtfpBert", actions=actions, magneticField=field)
 # range cut
 geantservice.g4PostInitCommands += ["/run/setCut 0.1 mm"]
 
@@ -167,12 +174,6 @@ particle_converter = SimG4PrimariesFromEdmTool("EdmConverter")
 particle_converter.genParticles.Path = "GenParticles"
 geantsim.eventProvider = particle_converter
 
-# Magnetic field
-from Configurables import SimG4ConstantMagneticFieldTool
-if magnetic_field:
-    field = SimG4ConstantMagneticFieldTool("bField", FieldOn=True, FieldZMax=20*units.m, IntegratorStepper="ClassicalRK4")
-else:
-    field = SimG4ConstantMagneticFieldTool("bField", FieldOn=False)
 
 
 

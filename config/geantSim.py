@@ -121,8 +121,15 @@ randomEngine = eval('HepRndm__Engine_CLHEP__RanluxEngine_')
 randomEngine = randomEngine('RndmGenSvc.Engine')
 randomEngine.Seeds = [seed]
 
+# Magnetic field
+from Configurables import SimG4ConstantMagneticFieldTool
+if magnetic_field:
+    field = SimG4ConstantMagneticFieldTool("bField", FieldOn=True, FieldZMax=20*units.m, IntegratorStepper="ClassicalRK4")
+else:
+    field = SimG4ConstantMagneticFieldTool("bField", FieldOn=False)
+
 from Configurables import SimG4Svc
-geantservice = SimG4Svc("SimG4Svc", detector='SimG4DD4hepDetector', physicslist="SimG4FtfpBert", actions="SimG4FullSimActions")
+geantservice = SimG4Svc("SimG4Svc", detector='SimG4DD4hepDetector', physicslist="SimG4FtfpBert", actions="SimG4FullSimActions", magneticField=field)
 # range cut
 geantservice.g4PostInitCommands += ["/run/setCut 0.1 mm"]
 
@@ -205,12 +212,6 @@ else:
     particle_converter.genParticles.Path = "GenParticles"
     geantsim.eventProvider = particle_converter
 
-# Magnetic field
-from Configurables import SimG4ConstantMagneticFieldTool
-if magnetic_field:
-    field = SimG4ConstantMagneticFieldTool("bField", FieldOn=True, FieldZMax=20*units.m, IntegratorStepper="ClassicalRK4")
-else:
-    field = SimG4ConstantMagneticFieldTool("bField", FieldOn=False)
 
 ##############################################################################################################
 #######                                       DIGITISATION                                       #############
