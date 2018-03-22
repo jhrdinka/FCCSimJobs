@@ -1,12 +1,15 @@
 path_to_INIT = '/cvmfs/fcc.cern.ch/sw/views/releases/0.9.1/x86_64-slc6-gcc62-opt/setup.sh'
 path_to_LHE = '/afs/cern.ch/work/h/helsens/public/FCCsoft/FlatGunLHEventProducer/'
 path_to_FCCSW = '/cvmfs/fcc.cern.ch/sw/releases/0.9.1/x86_64-slc6-gcc62-opt/linux-scientificcernslc6-x86_64/gcc-6.2.0/fccsw-0.9.1-c5dqdyv4gt5smfxxwoluqj2pjrdqvjuj'
-version = 'v02'
-import glob, os, sys,subprocess,cPickle
+yamldir='/afs/cern.ch/work/h/helsens/public/FCCDicts/yaml/FCC/simu/'
+version = 'v03'
+import glob, os, sys
 import commands
 import time
 import random
 from datetime import datetime
+import utils as ut
+import makeyaml as my
 
 #__________________________________________________________
 def getInputFiles(path,version):
@@ -32,68 +35,6 @@ def takeOnlyNonexistingFiles(files):
     # ToDo remove from list files that exist in a reco dictionary
     return files, len(files)
 
-#__________________________________________________________
-def getCommandOutput(command):
-    p = subprocess.Popen(command, shell = True, stdout = subprocess.PIPE, stderr = subprocess.PIPE)
-    stdout,stderr = p.communicate()
-    return {"stdout":stdout, "stderr":stderr, "returncode":p.returncode}
-
-# ToDo: unify both submit:
-#__________________________________________________________
-def SubmitToLsf(cmd,nbtrials):
-    submissionStatus=0
-    cmd=cmd.replace('//','/')
-    for i in range(nbtrials):
-        outputCMD = getCommandOutput(cmd)
-        stderr=outputCMD["stderr"].split('\n')
-
-        for line in stderr :
-            if line=="":
-                print "------------GOOD SUB"
-                submissionStatus=1
-                break
-            else:
-                print "++++++++++++ERROR submitting, will retry"
-                print "error: ",stderr
-                print "Trial : "+str(i)+" / "+str(nbtrials)
-                time.sleep(10)
-                break
-
-        if submissionStatus==1:
-            jobid=outputCMD["stdout"].split()[1].replace("<","").replace(">","")
-            return 1,jobid
-
-        if i==nbtrials-1:
-            print "failed sumbmitting after: "+str(nbtrials)+" trials, will exit"
-            return 0,0
-
-#__________________________________________________________
-def SubmitToCondor(cmd,nbtrials):
-    submissionStatus=0
-    cmd=cmd.replace('//','/')
-    for i in xrange(nbtrials):
-        outputCMD = getCommandOutput(cmd)
-        stderr=outputCMD["stderr"].split('\n')
-        stdout=outputCMD["stdout"].split('\n')
-
-        if len(stderr)==1 and stderr[0]=='' :
-            print "------------GOOD SUB"
-            submissionStatus=1
-        else:
-            print "++++++++++++ERROR submitting, will retry"
-            print "Trial : "+str(i)+" / "+str(nbtrials)
-            print "stderr : ",stderr
-            print "stderr : ",len(stderr)
-
-            time.sleep(10)
-
-
-        if submissionStatus==1:
-            return 1,0
-
-        if i==nbtrials-1:
-            print "failed sumbmitting after: "+str(nbtrials)+" trials, will exit"
-            return 0,0
 
 
 #__________________________________________________________
@@ -113,7 +54,8 @@ if __name__=="__main__":
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument('--local', type=str, help='Use local FCCSW installation, need to provide a file with path_to_INIT and or path_to_FCCSW')
-    parser.add_argument('--version', type=str, default = "v01", help='Specify the version of FCCSimJobs')
+    parser.add_argument('--version', type=str, default = "v03", help='Specify the version of FCCSimJobs')
+    yamlcheck = yamldir+version+'/check.yaml'
 
     parser.add_argument("--bFieldOff", action='store_true', help="Switch OFF magnetic field (default: B field ON)")
     parser.add_argument("--pythiaSmearVertex", action='store_true', help="Write vertex smearing parameters to pythia config file")
@@ -360,14 +302,22 @@ if __name__=="__main__":
         print card
         print os.path.isfile(card)
 
-    # number of jobs is number of files
+    seed=''
+    uid=os.path.join(version, job_dir, job_type)
     for i in xrange(num_jobs):
         if sim:
-            seed = int(datetime.utcnow().strftime('%Y%m%d%H%M%S%f')[:-3])
-            seed = int('%i%i'%(seed,userext))
-            uniqueID='%s_%i'%(user,seed)
-            print uniqueID
-            outfile = 'output_%s_%s.root'%(thebatch,uniqueID)
+            seed=ut.getuid()
+            yamldir_process = '%s/%s'%(yamldir,uid)
+            if not ut.dir_exist(yamldir_process):
+                os.system("mkdir -p %s"%yamldir_process)
+            myyaml = my.makeyaml(yamldir_process, seed)
+        
+            if not myyaml: 
+                print 'job %s already exists'%str(seed)
+                continue
+
+            print 'seed  ',seed
+            outfile = 'output_%i.root'%(seed)
             print "Name of the output file: ", outfile
         else:
             infile = os.path.basename(input_files[i])
@@ -378,9 +328,9 @@ if __name__=="__main__":
             uniqueID = infile_split[2] + '_' + infile_split[3]
             print uniqueID
         if args.physics:
-            frunname = 'job_%s_%s_%s.sh'%(short_job_type,process,uniqueID)
+            frunname = 'job_%s_%s_%s.sh'%(short_job_type,process,str(seed))
         else:
-            frunname = 'job_%s_%s_%dGeV_eta%s_%s.sh'%(short_job_type,particle_human_names[pdg],energy,str(decimal.Decimal(str(etaMax)).normalize()),uniqueID)
+            frunname = 'job_%s_%s_%dGeV_eta%s_%s.sh'%(short_job_type,particle_human_names[pdg],energy,str(decimal.Decimal(str(etaMax)).normalize()),str(seed))
 
         os.system("mkdir -p %s"%logdir)
         frun = None
@@ -498,7 +448,8 @@ if __name__=="__main__":
         if args.lsf:
             cmdBatch="bsub -M 4000000 -R \"pool=40000\" -q %s -cwd%s %s" %(queue, logdir,logdir+'/'+frunname)
             batchid=-1
-            job,batchid=SubmitToLsf(cmdBatch,10)
+            job,batchid=ut.SubmitToLsf(cmdBatch,10)
+            ut.yamlstatus(yamlcheck, uid, False)
         elif args.no_submit:
             job = 0
             print "scripts generated in ", os.path.join(logdir, frunname),
@@ -519,9 +470,9 @@ if __name__=="__main__":
             commands.getstatusoutput('chmod 777 %s/%s'%(logdir,fsubname))
             fsub.write('executable            = %s/%s\n' %(logdir,frunname))
             fsub.write('arguments             = $(ClusterID) $(ProcId)\n')
-            fsub.write('output                = %s/out/job.%s.$(ClusterId).$(ProcId).out\n'%(logdir,uniqueID))
-            fsub.write('log                   = %s/log/job.%s.$(ClusterId).log\n'%(logdir,uniqueID))
-            fsub.write('error                 = %s/err/job.%s.$(ClusterId).$(ProcId).err\n'%(logdir,uniqueID))
+            fsub.write('output                = %s/out/job.%s.$(ClusterId).$(ProcId).out\n'%(logdir,str(seed)))
+            fsub.write('log                   = %s/log/job.%s.$(ClusterId).log\n'%(logdir,str(seed)))
+            fsub.write('error                 = %s/err/job.%s.$(ClusterId).$(ProcId).err\n'%(logdir,str(seed)))
             if args.physics:
                 fsub.write('RequestCpus = 8\n')
             else:
@@ -533,7 +484,9 @@ if __name__=="__main__":
 
             print cmdBatch
             batchid=-1
-            job,batchid=SubmitToCondor(cmdBatch,10)
+            job,batchid=ut.SubmitToCondor(cmdBatch,10)
+            ut.yamlstatus(yamlcheck, uid, False)
+
         nbjobsSub+=job
 
     print 'succesfully sent %i  jobs'%nbjobsSub
