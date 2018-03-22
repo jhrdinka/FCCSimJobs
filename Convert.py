@@ -21,6 +21,13 @@ trackerEndcap_decoder = Decoder("system:4,posneg:1,disc:5,component:17,x:-15,z:-
 lastECalBarrelLayer = int(7)
 lastECalEndcapLayer = int(39)
 lastECalFwdLayer = int(41)
+lastInnerTrackerBarrelLayer = int(5)
+lastOuterTrackerBarrelLayer = int(11)
+lastInnerTrackerPosECapLayer = int(16)
+lastInnerTrackerNegECapLayer = int(21)
+lastOuterTrackerPosECapLayer = int(27)
+lastOuterTrackerNegECapLayer = int(33)
+lastFwdTrackerPosECapLayer = int(42)
 
 def systemID(cellid):
     system_decoder.setValue(cellid)
@@ -299,10 +306,28 @@ for event in intree:
             rec_phi.push_back(position.Phi())
             rec_pt.push_back(c.core.energy*position.Unit().Perp())
             sysID = systemID(c.core.cellId)
-            if  sysID == 0 or sysID == 1:
+            if  sysID == 0 :
                 rec_layer.push_back(trackerBarrel_decoder["layer"])
-            else:
-            	rec_layer.push_back(trackerEndcap_decoder["layer"])
+            elif sysID == 1 :
+                rec_layer.push_back(trackerBarrel_decoder["layer"] + lastInnerTrackerBarrelLayer + 1)
+            elif sysID == 2 :
+                posneg = trackerBarrel_decoder["posneg"]
+                if posneg == 0 :
+                    rec_layer.push_back(trackerBarrel_decoder["disc"] + lastOuterTrackerBarrelLayer + 1)
+                else :
+                    rec_layer.push_back(trackerBarrel_decoder["disc"] + lastInnerTrackerPosECapLayer + 1)
+            elif sysID == 3:
+                posneg = trackerBarrel_decoder["posneg"]
+                if posneg == 0 :
+                    rec_layer.push_back(trackerBarrel_decoder["disc"] + lastInnerTrackerNegECapLayer + 1)
+                else :
+                    rec_layer.push_back(trackerBarrel_decoder["disc"] + lastOuterTrackerPosECapLayer + 1)
+            else :
+                posneg = trackerBarrel_decoder["posneg"]
+                if posneg == 0 :
+                    rec_layer.push_back(trackerBarrel_decoder["disc"] + lastOuterTrackerNegECapLayer + 1)
+                else :
+                    rec_layer.push_back(trackerBarrel_decoder["disc"] + lastFwdTrackerPosECapLayer + 1)
             rec_x.push_back(c.position.x/10.)
             rec_y.push_back(c.position.y/10.)
             rec_z.push_back(c.position.z/10.)
