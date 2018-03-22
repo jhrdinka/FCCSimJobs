@@ -3,18 +3,27 @@ path_to_LHE = '/afs/cern.ch/work/h/helsens/public/FCCsoft/FlatGunLHEventProducer
 path_to_FCCSW = '/cvmfs/fcc.cern.ch/sw/releases/0.9.1/x86_64-slc6-gcc62-opt/linux-scientificcernslc6-x86_64/gcc-6.2.0/fccsw-0.9.1-c5dqdyv4gt5smfxxwoluqj2pjrdqvjuj'
 yamldir='/afs/cern.ch/work/h/helsens/public/FCCDicts/yaml/FCC/simu/'
 version = 'v03'
+
 import glob, os, sys
 import commands
 import time
 import random
+import json
+import argparse
+import imp
+import decimal
+import re
+
+from math import pi
 from datetime import datetime
+
 import utils as ut
 import makeyaml as my
+import users as us
 
 #__________________________________________________________
 def getInputFiles(path,version):
     files = []
-    import json
     dicname = '/afs/cern.ch/work/h/helsens/public/FCCDicts/SimulationDict_'+version+'.json'
     mydict=None
     with open(dicname) as f:
@@ -31,16 +40,61 @@ def getInputFiles(path,version):
         quit()
     return files
 
+#__________________________________________________________
 def takeOnlyNonexistingFiles(files):
     # ToDo remove from list files that exist in a reco dictionary
     return files, len(files)
 
 
+#__________________________________________________________
+def getJobInfo(argv):
+    if '--recPositions' in argv:
+        default_options = 'config/recPositions.py'
+        job_type = "reco/positions"
+        short_job_type = "recPos"
+        return default_options,job_type,short_job_type,False
+
+    elif '--recSlidingWindow' in argv:
+        default_options = 'config/recSlidingWindow.py'
+        if '--noise' in argv:
+            job_type = "reco/slidingWindow/electronicsNoise"
+        else:
+            job_type = "reco/slidingWindow/noNoise"
+        short_job_type = "recWin"
+        return default_options,job_type,short_job_type,False
+
+    elif '--recTopoClusters' in argv:
+        default_options = 'config/recTopoClusters.py'
+        job_type = "reco/topoClusters"
+        short_job_type = "recTopo"
+        return default_options,job_type,short_job_type,False
+
+    elif '--ntuple' in argv:
+        default_options = '....' # TODO how ?
+        job_type = "ntup"
+        short_job_type = "ntup"
+        return default_options,job_type,short_job_type,False
+
+    elif '--trackerPerformance' in argv:
+        default_options = 'config/geantSim_trackerPerformance.py'
+        if "--tripletTracker" in argv:
+          job_type="simu/trkPerf_triplet"
+          short_job_type = "sim"
+        else:
+          job_type="simu/trkPerf_v3_03"
+          short_job_type = "sim"
+        return default_options,job_type,short_job_type,True
+
+    else:
+        default_options = 'config/geantSim.py'
+        job_type = "simu"
+        short_job_type = "sim"
+        return default_options,job_type,short_job_type,True
+
 
 #__________________________________________________________
 if __name__=="__main__":
     Dir = os.getcwd()
-    import users as us
 
     user=os.environ['USER']
     userext=-999999
@@ -51,7 +105,6 @@ if __name__=="__main__":
         print 'user not known ',user,'   exit (needs to be added to users.py)'
         sys.exit(3)
 
-    import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument('--local', type=str, help='Use local FCCSW installation, need to provide a file with path_to_INIT and or path_to_FCCSW')
     parser.add_argument('--version', type=str, default = "v03", help='Specify the version of FCCSimJobs')
@@ -81,57 +134,8 @@ if __name__=="__main__":
 
     parser.add_argument("--tripletTracker", action="store_true", help="Use triplet tracker layout instead of baseline")
 
-    sim = False
-    if '--recPositions' in sys.argv:
-        default_options = 'config/recPositions.py'
-        job_type = "reco/positions"
-        short_job_type = "recPos"
-    elif '--recSlidingWindow' in sys.argv:
-        default_options = 'config/recSlidingWindow.py'
-        if '--noise' in sys.argv:
-            job_type = "reco/slidingWindow/electronicsNoise"
-        else:
-            job_type = "reco/slidingWindow/noNoise"
-        short_job_type = "recWin"
-    elif '--recTopoClusters' in sys.argv:
-        default_options = 'config/recTopoClusters.py'
-        if '--noise' in sys.argv:
-            if '--calibrate' in sys.argv:
-                job_type = "reco/topoClusters/electronicsNoise/calibrated" 
-            else:
-                job_type = "reco/topoClusters/electronicsNoise" 
-        else:
-            if  '--calibrate' in sys.argv:
-                job_type = "reco/topoClusters/noNoise/calibrated"
-            else:
-                job_type = "reco/topoClusters/noNoise/calibrated"
-        short_job_type = "recTopo"
-    elif '--ntuple' in sys.argv:
-        default_options = 'config/recPositions.py'
-        job_type = "ntup"
-        short_job_type = "ntup"
-    elif '--trackerPerformance' in sys.argv:
-        default_options = 'config/geantSim_trackerPerformance.py'
-        sim = True
-        if "--tripletTracker" in sys.argv:
-          job_type="simu/trkPerf_triplet"
-          short_job_type = "sim"
-        else:
-          job_type="simu/trkPerf_v3_03"
-          short_job_type = "sim"
-    elif '--pileup' in sys.argv:
-        default_options = 'config/recPileupNoisePerCell.py'
-        job_type = "ana/pileup"
-        short_job_type = "pileup"
-    elif '--mergeMinBias' in sys.argv:
-        default_options = 'config/mergeMinBias.py'
-        job_type = "ana/merged" 
-        short_job_type = "mergeMinBias"
-    else:
-        default_options = 'config/geantSim.py'
-        job_type = "simu"
-        short_job_type = "sim"
-        sim = True
+    default_options,job_type,short_job_type,sim = getJobInfo(sys.argv)
+
     parser.add_argument('--jobOptions', type=str, default = default_options, help='Name of the job options run by FCCSW (default config/geantSim.py')
 
     genTypeGroup = parser.add_mutually_exclusive_group(required = True) # Type of events to generate
@@ -139,9 +143,7 @@ if __name__=="__main__":
     genTypeGroup.add_argument("--physics", action='store_true', help="Physics even run with Pythia")
     genTypeGroup.add_argument("--LHE", action='store_true', help="LHE events + Pythia")
 
-    from math import pi
     singlePartGroup = parser.add_argument_group('Single particles')
-    import sys
     singlePartGroup.add_argument('-e','--energy', type=int, required = '--singlePart' in sys.argv, help='Energy of particle in GeV')
     singlePartGroup.add_argument('--etaMin', type=float, default=0., help='Minimal pseudorapidity')
     singlePartGroup.add_argument('--etaMax', type=float, default=0., help='Maximal pseudorapidity')
@@ -176,7 +178,6 @@ if __name__=="__main__":
 
     if '--local' in sys.argv:
         print "FCCSW is taken from : ", args.local ,"\n"
-        import imp
         path=imp.load_source('path', args.local)
         try :
             path_to_INIT = path.path_to_INIT
@@ -221,7 +222,6 @@ if __name__=="__main__":
         print "=================================="
         print "particle PDG, name: ", pdg, " ", particle_human_names[pdg]
         print "energy: ", energy, "GeV"
-        import decimal
         if etaMin == etaMax:
             print "eta: ", etaMin
             eta_str = "eta" + str(decimal.Decimal(str(etaMin)).normalize())
@@ -323,7 +323,6 @@ if __name__=="__main__":
             infile = os.path.basename(input_files[i])
             outfile = infile
             print "Name of the input file: ", infile
-            import re
             infile_split = re.split(r'[_.]',infile)
             uniqueID = infile_split[2] + '_' + infile_split[3]
             print uniqueID
