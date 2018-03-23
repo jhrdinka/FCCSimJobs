@@ -153,7 +153,7 @@ if __name__=="__main__":
     singlePartGroup.add_argument('--flat', action='store_true', help='flat energy distribution for single particle generation')
 
     physicsGroup = parser.add_argument_group('Physics','Physics process')
-    lhe_physics = ["ljets","top","Wqq","Zqq","Hbb"]
+    lhe_physics = ["ljets","cjets","bjets","top","Wqq","Zqq","Hbb"]
     SM_physics = ["MinBias","Haa","Zee", "H4e"]
     physicsGroup.add_argument('--process', type=str, required = '--physics' in sys.argv, help='Process type', choices = lhe_physics + SM_physics)
     physicsGroup.add_argument('--pt', type=int,
@@ -376,8 +376,10 @@ if __name__=="__main__":
                     frun.write('cd %s\n' %(path_to_LHE))
                     if process=='ljets':
                         frun.write('python flatGunLHEventProducer.py   --pdg 1 2 3   --guntype pt   --nevts %i   --ecm 100000.   --pmin %f   --pmax %f   --etamin %f   --etamax %f  --seed %i   --output $JOBDIR/events.lhe\n'%(num_events,pt,pt,-1.6,1.6,seed))
-                    # elif process=='bjets':
-                    #     frun.write('python flatGunLHEventProducer.py   --pdg 5   --guntype pt   --nevts %i   --ecm 100000.   --pmin %f   --pmax %f   --etamin %f   --etamax %f  --seed %i   --output $JOBDIR/events.lhe\n'%(num_events,pt,pt,-1.6,1.6,seed))
+                    elif process=='cjets':
+                        frun.write('python flatGunLHEventProducer.py   --pdg 4   --guntype pt   --nevts %i   --ecm 100000.   --pmin %f   --pmax %f   --etamin %f   --etamax %f  --seed %i   --output $JOBDIR/events.lhe\n'%(num_events,pt,pt,-1.6,1.6,seed))
+                    elif process=='bjets':
+                        frun.write('python flatGunLHEventProducer.py   --pdg 5   --guntype pt   --nevts %i   --ecm 100000.   --pmin %f   --pmax %f   --etamin %f   --etamax %f  --seed %i   --output $JOBDIR/events.lhe\n'%(num_events,pt,pt,-1.6,1.6,seed))
                     elif process=='top':
                         frun.write('python flatGunLHEventProducer.py   --pdg 6   --guntype pt   --nevts %i   --ecm 100000.   --pmin %f   --pmax %f   --etamin %f   --etamax %f  --seed %i   --output $JOBDIR/events.lhe\n'%(num_events,pt,pt,-1.6,1.6,seed))
                     elif process=='Zqq':

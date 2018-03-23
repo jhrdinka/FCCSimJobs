@@ -16,6 +16,7 @@ Table of contents
         * [Simulation](#simulation)
         * [Reconstruction](#reconstruction)
      * [Miscellaneous](#miscellaneous)
+     * [Expert mode](#expert-mode)
 
 Clone and initialisation
 ========================
@@ -45,7 +46,7 @@ Physics
 =======
 If **--physics** is used, the following options are possible
    - **--process** to select the type of process. Two types are available
-      - from LHE events, this will call a gun that will produce 2 back to back objects, the following keys are available **ljets**, **top**, **Wqq**, **Zqq**, **Hbb**. If this option is used, the pt can also be given using **--pt**
+      - from LHE events, this will call a gun that will produce 2 back to back objects, the following keys are available **ljets**, **cjets**, **bjets**, **top**, **Wqq**, **Zqq**, **Hbb**. If this option is used, the pt can also be given using **--pt**
       - from calling pythia8 direcly, thus generating the events at 100TeV, the following keys are available **MinBias**, **Haa**, **Zee**, **H4e**
       
 
@@ -59,7 +60,10 @@ There are common options
 
 FCCSW configuration
 ===================
-The default FCC Software verson is 8.3 taken from /cvmfs/fcc.cern.ch/sw/0.8.3/fccsw/0.8.3/x86_64-slc6-gcc62-opt/
+The default FCC Software verson is 0.9.1 taken from
+```
+/cvmfs/fcc.cern.ch/sw/releases/0.9.1/x86_64-slc6-gcc62-opt/linux-scientificcernslc6-x86_64/gcc-6.2.0/fccsw-0.9.1-c5dqdyv4gt5smfxxwoluqj2pjrdqvjuj
+```
    - the **--local** option allows to initialize local SW installation, add your path in inits/private.py script
    - the cell positions reconstruction is running only on local SW installation (/afs/cern.ch/work/c/cneubuse/public/CaloCellPositions/FCCSW/), to use this add **--local inits/CellPositions.py**
  
@@ -98,3 +102,8 @@ http://fcc-physics-events.web.cern.ch/fcc-physics-events/FCCsim_v01.php
 This is something that can not be done centrally yet as I do not have rights to remove files I haven't produced.
 
 
+Expert mode
+===========
+
+python python/run.py --check --version v03 --process  physics/MinBias/bFieldOn/etaFull/simu  --force
+python python/run.py --clean --version v03

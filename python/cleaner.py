@@ -11,23 +11,23 @@ class cleaner():
     def __init__(self, indir, yamldir, process, version):
         self.indir = indir+'/'+version+'/'+process
         self.yamldir = yamldir+'/'+version+'/'+process
-        self.yamlcheck = yamldir+self.version+'/check.yaml'
+        self.yamlcheck = yamldir+version+'/check.yaml'
         self.process = process
 
 #__________________________________________________________
     def clean(self):
         nfailed=0
         All_files = []
-        if self.process=='':
+        print "%s/merge.yaml"%self.yamldir
+        if self.process!='':
             All_files = glob.glob("%s/merge.yaml"%self.yamldir)
         else:
-            ldir=[x[0] for x in os.walk(self.indir)]
+            ldir=[x[0] for x in os.walk(self.yamldir)]
             for l in ldir:
                 files = glob.glob("%s/merge.yaml"%l)
                 if len(files)>0: All_files.extend(files)
 
         print All_files
-        sys.exit(3)
         for f in All_files:
             print '=====================    ',f
             with open(f, 'r') as stream:

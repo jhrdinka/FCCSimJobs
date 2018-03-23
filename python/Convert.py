@@ -81,9 +81,9 @@ rec_detid = r.std.vector(int)()
 rec_bits = r.std.vector(float)()
 
 outfile=r.TFile(outfile_name,"recreate")
-outfile.mkdir('ana')
-r.gDirectory.cd('ana')
-outtree=r.TTree('hgc','hgc')
+#outfile.mkdir('ana')
+#r.gDirectory.cd('ana')
+outtree=r.TTree('events','Events')
 
 maxEvent = intree.GetEntries()
 print 'Number of events : ',maxEvent
