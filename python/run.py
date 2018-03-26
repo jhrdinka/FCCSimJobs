@@ -1,6 +1,7 @@
 yamldir='/afs/cern.ch/work/h/helsens/public/FCCDicts/yaml/FCC/simu/'
 indir='/eos/experiment/fcc/hh/simulation/samples/'
 statfile='/afs/cern.ch/user/h/helsens/www/data/statsimu_FCC.html'
+webfile='/afs/cern.ch/user/h/helsens/www/data/FCCsim_VERSION.txt'
 
 
 #__________________________________________________________
@@ -52,3 +53,10 @@ if __name__=="__main__":
         import cleaner as clf
         clean=clf.cleaner(indir, yamldir, args.process, args.version)
         clean.cleanoldjobs()
+
+    elif args.web:
+        import printer as prt
+        webfile=webfile.replace('VERSION', args.version)
+        printdic=prt.printer(yamldir,indir,webfile, args.version)
+        printdic.run()
+

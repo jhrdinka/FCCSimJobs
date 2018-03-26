@@ -61,7 +61,7 @@ class merger():
                         tmplist=[tmpf['processing']['out'].split('/')[-1], tmpf['processing']['nevents']]
                         outfiles.append(tmplist)
                         outdir=tmpf['processing']['out'].replace(tmpf['processing']['out'].split('/')[-1],'')
-                        if tmpf['processing']['user'] not in users: users[tmpf['processing']['user']]=0
+                        if tmpf['processing']['user'] not in users: users[tmpf['processing']['user']]=1
                         else: users[tmpf['processing']['user']]=users[tmpf['processing']['user']]+1
                         ndone+=1
                     except yaml.YAMLError as exc:
@@ -82,8 +82,9 @@ class merger():
             with open(outfile, 'w') as outyaml:
                 yaml.dump(dic, outyaml, default_flow_style=False) 
                 
-            ut.yamlstatus(self.yamlcheck, process, True)
             if ndone+nbad==len(All_files):
                 ut.yamlstatus(self.yamlcheck, process, True)
+                print 'merged, status true ndone/nbad/ntot %i/%i/%i'%(ndone,nbad,len(All_files))
             else:
                 ut.yamlstatus(self.yamlcheck, process, False)
+                print 'not merged, status false ndone/nbad/ntot %i/%i/%i'%(ndone,nbad,len(All_files))

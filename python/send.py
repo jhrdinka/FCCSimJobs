@@ -13,6 +13,7 @@ import argparse
 import imp
 import decimal
 import re
+import yaml
 
 from math import pi
 from datetime import datetime
@@ -22,28 +23,42 @@ import makeyaml as my
 import users as us
 
 #__________________________________________________________
-def getInputFiles(path,version):
+def getInputFiles(path):
     files = []
-    dicname = '/afs/cern.ch/work/h/helsens/public/FCCDicts/SimulationDict_'+version+'.json'
-    mydict=None
-    with open(dicname) as f:
-        mydict = json.load(f)
-    if not path in mydict.keys():
-        print "ERROR, dictionary ", dicname, " does not contain ", path
-        quit()
-    for j in mydict[path]:
-        if j['status']=='DONE':
-            if os.path.exists(j['out']):
-                files.append(j['out'])
-    if len(files) == 0:
-        print "ERROR, no input files"
-        quit()
+    All_files = glob.glob("%s/merge.yaml"%path)
+    if len(All_files)==0:
+        print 'there is no files checked for process %s exit'%path
+        sys.exit(3)
+
+    if len(All_files)>1:
+        print 'not sure how you can get two merged files %s exit'%path
+        sys.exit(3)
+
+    with open(All_files[0], 'r') as stream:
+        try:
+            tmpf = yaml.load(stream)
+            outfiles=tmpf['merge']['outfiles']
+            for f in outfiles:
+                fname='%s%s'%(tmpf['merge']['outdir'],f[0])
+                files.append(fname)
+        except yaml.YAMLError as exc:
+            print(exc)
+
     return files
 
 #__________________________________________________________
-def takeOnlyNonexistingFiles(files):
-    # ToDo remove from list files that exist in a reco dictionary
-    return files, len(files)
+def takeOnlyNonexistingFiles(files, output):
+    All_files = glob.glob("%s/output*.yaml"%output)
+    if len(All_files)==0: return files, len(files)
+    newlist=[]
+    for f in files:
+        found=False
+        tocheck=f.split('/')[-1]
+        tocheck=tocheck.replace('.root','')
+        for ff in All_files:
+            if tocheck in ff: found=True
+        if not found:newlist.append(f)
+    return newlist, len(newlist)
 
 
 #__________________________________________________________
@@ -108,7 +123,6 @@ if __name__=="__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--local', type=str, help='Use local FCCSW installation, need to provide a file with path_to_INIT and or path_to_FCCSW')
     parser.add_argument('--version', type=str, default = "v03", help='Specify the version of FCCSimJobs')
-    yamlcheck = yamldir+version+'/check.yaml'
 
     parser.add_argument("--bFieldOff", action='store_true', help="Switch OFF magnetic field (default: B field ON)")
     parser.add_argument("--pythiaSmearVertex", action='store_true', help="Write vertex smearing parameters to pythia config file")
@@ -192,6 +206,8 @@ if __name__=="__main__":
         print 'path_to_FCCSW: ',path_to_FCCSW
 
     version = args.version
+    yamlcheck = yamldir+version+'/check.yaml'
+
     print 'FCCSim version: ',version
     magnetic_field = not args.bFieldOff
     b_field_str = "bFieldOn" if not args.bFieldOff else "bFieldOff"
@@ -275,11 +291,13 @@ if __name__=="__main__":
     # first make sure the output path for root files exists
     outdir = os.path.join( output_path, version, job_dir, job_type)
     print "Output will be stored in ... ", outdir
-    if not sim:
-        inputID = version+"/" + job_dir + "/simu"
-        inputID = inputID.replace('//','/')
-        input_files = getInputFiles(inputID,version)
-        input_files, instatus = takeOnlyNonexistingFiles(input_files)
+    if not sim:       
+        inputID = os.path.join(yamldir, version, job_dir, 'simu')
+        outputID = os.path.join(yamldir, version, job_dir, job_type)
+
+        input_files = getInputFiles(inputID)
+        input_files, instatus = takeOnlyNonexistingFiles(input_files, outputID)
+
         if instatus < num_jobs:
             num_jobs = instatus
             print "WARNING Directory contains only ", instatus, " files, using all for the reconstruction"
@@ -323,9 +341,20 @@ if __name__=="__main__":
             infile = os.path.basename(input_files[i])
             outfile = infile
             print "Name of the input file: ", infile
+
+            yamldir_process = '%s/%s'%(yamldir,uid)
+            if not ut.dir_exist(yamldir_process):
+                os.system("mkdir -p %s"%yamldir_process)
+
             infile_split = re.split(r'[_.]',infile)
-            uniqueID = infile_split[2] + '_' + infile_split[3]
-            print uniqueID
+            seed = infile_split[1]
+            myyaml = my.makeyaml(yamldir_process, seed)
+        
+            if not myyaml: 
+                print 'job %s already exists'%str(seed)
+                continue
+
+
         if args.physics:
             frunname = 'job_%s_%s_%s.sh'%(short_job_type,process,str(seed))
         else:
@@ -428,7 +457,7 @@ if __name__=="__main__":
                 frun.write('%s --inNames %s\n'%(common_fccsw_command, listOfInputFiles))
            
         if '--recPositions' in sys.argv:
-            frun.write('python %s/Convert.py edm.root $JOBDIR/%s\n'%(current_dir,outfile))
+            frun.write('python %s/python/Convert.py edm.root $JOBDIR/%s\n'%(current_dir,outfile))
             frun.write('rm edm.root \n')
         if '--ntuple' in sys.argv:
             frun.write('python %s/Convert_Jan.py edm.root $JOBDIR/%s\n'%(current_dir,outfile))

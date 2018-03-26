@@ -109,6 +109,7 @@ class checker_yaml():
             uid=process.replace(self.indir,"")
             if uid=="": continue
             if self.process!='' and uid!=self.process: continue
+            #if ut.yamlcheck(self.yamlcheck, uid) and not force :continue
             All_files = glob.glob("%s/output_*.root"%(process))
             if len(All_files)==0:continue
 

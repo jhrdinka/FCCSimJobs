@@ -57,25 +57,15 @@ class cleaner():
 
 #__________________________________________________________
     def cleanoldjobs(self):
-        ldir=[]
-        if self.process=='':
-            ldir=next(os.walk(self.yamldir))[1]
-        else: ldir=[self.process]
-
-        #ldir=[x[0] for x in os.walk(self.yamldir)]
-        print ldir
+ 
+        ldir=[x[0] for x in os.walk(self.yamldir)]
        
         for l in ldir:
-            All_files = []
-            if self.process=='':
-                All_files = glob.glob("%s/%s/events_*.yaml"%(self.yamldir,l))
-            else:
-                All_files = glob.glob("%s/events_*.yaml"%(self.yamldir))
 
+            All_files = glob.glob("%s/output_*.yaml"%l)
             if len(All_files)==0:continue
             process=l            
-            if self.process!='' and self.process!=process: 
-                continue
+            if self.process!='' and self.process not in l: continue
 
             print 'process from the input directory ',process
 
@@ -88,12 +78,11 @@ class cleaner():
                     try:
                        tmpf = yaml.load(stream)
                        if tmpf['processing']['status']=='sending':
-                           if ut.gettimestamp() - tmpf['processing']['timestamp']>8000:
-                               print 'job %s is running since too long, will delete the yaml'%(f)
-
-                           cmd="rm %s"%(f)
-                           print cmd
-                           os.system(cmd)
+                           if ut.gettimestamp() - tmpf['processing']['timestamp']>20000:
+                               print 'job %s is running since too long  %i  , will delete the yaml'%(f,ut.gettimestamp() - tmpf['processing']['timestamp'])
+                               cmd="rm %s"%(f)
+                               print cmd
+                               os.system(cmd)
 
                     except yaml.YAMLError as exc:
                         print(exc)
