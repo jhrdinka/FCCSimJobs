@@ -110,7 +110,7 @@ TailCatchercells = CellPositionsTailCatcherTool("CellPositionsTailCatcher",
 from Configurables import CreateCellPositions
 positionsEcalBarrel = CreateCellPositions("positionsEcalBarrel",
                                           positionsTool=ECalBcells,
-                                          hits = "ECalBarrelCellsRedo",
+                                          hits = "ECalBarrelCells",
                                           positionedHits = "ECalBarrelCellPositions",
                                           OutputLevel = INFO)
 positionsHcalBarrel = CreateCellPositions("positionsHcalBarrel",
@@ -160,7 +160,7 @@ chra = ChronoAuditor()
 audsvc = AuditorSvc()
 audsvc.Auditors = [chra]
 podioinput.AuditExecute = True
-recreateEcalBarrelCells.AuditExecute = True
+#recreateEcalBarrelCells.AuditExecute = True
 positionsEcalBarrel.AuditExecute = True
 positionsEcalEndcap.AuditExecute = True
 positionsEcalFwd.AuditExecute = True
@@ -172,7 +172,7 @@ positionsTailCatcher.AuditExecute = True
 out.AuditExecute = True
 
 list_of_algorithms = [podioinput,
-                      recreateEcalBarrelCells,
+                      #                      recreateEcalBarrelCells,
                       positionsEcalBarrel,
                       positionsEcalEndcap,
                       positionsEcalFwd,
