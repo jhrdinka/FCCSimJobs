@@ -177,7 +177,7 @@ if __name__=="__main__":
     # Add noise on cluster level
     parser.add_argument("--noise", action='store_true', help="Add electronics noise")
     parser.add_argument("--addPileupNoise", action='store_true', help="Add pile-up noise in qudrature to electronics noise")
-    parser.add_argument('--pileup', type=int,  required = '--mergePileup' in sys.argv or '--addPileupNoise' in sys.argv, help='Pileup')
+    parser.add_argument('--pileup', type=int,  required = '--mergePileup' in sys.argv or '--addPileupNoise' in sys.argv or '--addPileupToSignal' in sys.argv, help='Pileup')
     parser.add_argument("--tripletTracker", action="store_true", help="Use triplet tracker layout instead of baseline")
 
     default_options,job_type,short_job_type,sim = getJobInfo(sys.argv)
@@ -214,6 +214,7 @@ if __name__=="__main__":
     recoTopoClusterGroup.add_argument('--sigma1', type=int, default=4, help='Energy threshold [in number of sigmas] for seeding')
     recoTopoClusterGroup.add_argument('--sigma2', type=int, default=2, help='Energy threshold [in number of sigmas] for neighbours')
     recoTopoClusterGroup.add_argument('--sigma3', type=int, default=0, help='Energy threshold [in number of sigmas] for last neighbours')
+    recoTopoClusterGroup.add_argument("--addPileupToSignal", action='store_true', help="Add radomly PU evetnts to signal")
 
     args, _ = parser.parse_known_args()
 
@@ -355,7 +356,7 @@ if __name__=="__main__":
     print "Output will be stored in ... ", outdir
     if not sim:
         # if signal events are used (simu/) or mixed pileup events (simuPU.../)
-        if not args.mergePileup and not args.addPileupNoise and args.pileup and not (args.pileup == 0):
+        if not args.mergePileup and not args.addPileupNoise and not args.addPileupToSignal and args.pileup and not (args.pileup == 0):
             inputID = os.path.join(yamldir, version, job_dir, 'simuPU'+str(args.pileup))
         else:
             inputID = os.path.join(yamldir, version, job_dir, 'simu')
@@ -370,6 +371,14 @@ if __name__=="__main__":
         if instatus < num_jobs:
             num_jobs = instatus
             warning("Directory contains only " + str(instatus) + " files, using all for the reconstruction")
+
+    if args.addPileupToSignal: 
+        all_pileup_inputs=""
+        inputPileupID = os.path.join(yamldir, version, 'physics/MinBias/'+b_field_str+'/etaFull/simuPU'+str(args.pileup))
+        pileup_input_files = getInputFiles(inputPileupID)
+        for f in pileup_input_files:
+            all_pileup_inputs += " " + f # event pool = all inputs
+    
     # for the purpose of mixing pileup events all inputs must be passed to the config
     # merging pileup events will be done randomly from a given event pool
     if args.mergePileup:
@@ -379,7 +388,7 @@ if __name__=="__main__":
         seed=ut.getuid() # to generate new output name
         print 'seed  ',seed
         outfile = 'output_%i.root'%(seed)
-        print "Name of the output file: ", outfile
+        print "Name of the output file: ", outfile           
 
     os.system("mkdir -p %s"%outdir)
     # first make sure the output path exists
@@ -417,6 +426,9 @@ if __name__=="__main__":
             infile = os.path.basename(input_files[i])
             outfile = infile
             print "Name of the input file: ", infile
+            if args.addPileupToSignal :
+                pileupinfile = os.path.basename(pileup_input_files[i])
+                print "Name of the input file for pileup events: ", pileupinfile
 
             yamldir_process = '%s/%s'%(yamldir,uid)
             if not ut.dir_exist(yamldir_process):
@@ -471,8 +483,9 @@ if __name__=="__main__":
             common_fccsw_command += ' --physics'
         if '--local' in sys.argv:
             common_fccsw_command += ' --detectorPath ' + path_to_FCCSW
-        if args.mergePileup:
-            common_fccsw_command += ' --pileup ' + str(args.pileup)
+        if args.physics:
+            if args.mergePileup or args.addPileupToSignal:
+                common_fccsw_command += ' --pileup ' + str(args.pileup)
         if args.recPositions and args.pileup:
             common_fccsw_command += ' --prefixCollections merged '
         if args.recSlidingWindow:
@@ -526,6 +539,8 @@ if __name__=="__main__":
             frun.write('cd $JOBDIR\n')
             if args.mergePileup:
                 frun.write('%s --inName %s\n'%(common_fccsw_command, all_inputs))
+            elif args.addPileupToSignal:
+                frun.write('%s --inName %s --addPileupToSignal --mu %i --inPileupFileNames %s\n'%( common_fccsw_command, input_files[i], args.pileup, all_pileup_inputs))
             else:
                 frun.write('%s --inName %s\n'%(common_fccsw_command, input_files[i]))
         if args.recPositions:

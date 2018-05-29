@@ -1,11 +1,10 @@
-import argparse
+import argparse, os
 simparser = argparse.ArgumentParser()
 
 simparser.add_argument('--inName', type=str, help='Name of the input file', required=True)
 simparser.add_argument('--outName', type=str, help='Name of the output file', required=True)
 simparser.add_argument('-N','--numEvents',  type=int, help='Number of simulation events to run', required=True)
 simparser.add_argument("--physics", action='store_true', help="Physics events")
-
 simparser.add_argument("--addElectronicsNoise", action='store_true', help="Add electronics noise (default: false)")
 simparser.add_argument("--addPileupNoise", action='store_true', help="Add pileup noise")
 simparser.add_argument("--mu", type=int, help="Number of pileup-events", default=0)
@@ -13,6 +12,9 @@ simparser.add_argument('--sigma1', type=int, default=4, help='Energy threshold [
 simparser.add_argument('--sigma2', type=int, default=2, help='Energy threshold [in number of sigmas] for neighbours')
 simparser.add_argument('--sigma3', type=int, default=0, help='Energy threshold [in number of sigmas] for last neighbours')
 simparser.add_argument('--detectorPath', type=str, help='Path to detectors', default = "/cvmfs/fcc.cern.ch/sw/releases/0.9.1/x86_64-slc6-gcc62-opt/linux-scientificcernslc6-x86_64/gcc-6.2.0/fccsw-0.9.1-c5dqdyv4gt5smfxxwoluqj2pjrdqvjuj")
+simparser.add_argument("--addPileupToSignal", action='store_true', help="Add pileup events to signal (default: false)")
+simparser.add_argument('--inPileupFileNames',type=str, nargs = "+", help='Name of the pileup input file')
+
 simargs, _ = simparser.parse_known_args()
 
 print "=================================="
@@ -28,15 +30,27 @@ sigma1 = simargs.sigma1
 sigma2 = simargs.sigma2
 sigma3 = simargs.sigma3
 path_to_detector = simargs.detectorPath
+addPUevents = simargs.addPileupToSignal
 
 print "number of events = ", num_events
 print "input name: ", input_name
 print "output name: ", output_name
 print "electronic noise in Barrel: ", elNoise
 print "pileup noise in Barrel: ", puNoise
-print 'assuming %i pileup events '%(puEvents)
+if puNoise:
+    print 'assuming %i pileup events '%(puEvents)
 print 'energy thresholds for reconstruction: ', sigma1, '-', sigma2, '-', sigma3
 print "detectors are taken from: ", path_to_detector
+
+print "Add pileup events to signal: ", addPUevents
+if addPUevents:
+    input_pileup_name = simargs.inPileupFileNames
+    print "PU", (puEvents)
+    print "Input file names: ", input_pileup_name
+
+pileupFilenames = input_pileup_name
+import random
+random.shuffle(pileupFilenames)
 
 from Gaudi.Configuration import *
 ##############################################################################################################
@@ -93,7 +107,10 @@ hcalFieldValues=[8]
 from Configurables import ApplicationMgr, FCCDataSvc, PodioInput, PodioOutput
 podioevent = FCCDataSvc("EventDataSvc", input=input_name)
 
-podioinput = PodioInput("PodioReader", collections = ["TrackerPositionedHits", "ECalBarrelCells", "HCalBarrelCells", "HCalExtBarrelCells", "ECalEndcapCells", "HCalEndcapCells", "ECalFwdCells", "HCalFwdCells", "TailCatcherCells","GenParticles","GenVertices"], OutputLevel = DEBUG)
+podioinput = PodioInput("PodioReader", collections = ["ECalBarrelCells", "HCalBarrelCells", "HCalExtBarrelCells", "ECalEndcapCells", "HCalEndcapCells", "ECalFwdCells", "HCalFwdCells", "TailCatcherCells","GenParticles","GenVertices"], OutputLevel = DEBUG)
+
+inputCellCollectionECalBarrel = "ECalBarrelCells"
+inputCellCollectionHCalBarrel = "HCalBarrelCells"
 
 ##############################################################################################################
 #######                                       RECALIBRATE ECAL                                   #############
@@ -112,11 +129,59 @@ recreateEcalBarrelCells.hits.Path="ECalBarrelCells"
 recreateEcalBarrelCells.cells.Path="ECalBarrelCellsRedo"
 
 ##############################################################################################################
+#######                                       ADD PILEUP EVENTS                              #############
+##############################################################################################################
+if addPUevents:
+    # edm data from generation: particles and vertices
+    from Configurables import PileupParticlesMergeTool
+    particlemergetool = PileupParticlesMergeTool("ParticlesMerge")
+    # branchnames for the pileup
+    particlemergetool.genParticlesBranch = "GenParticles"
+    particlemergetool.genVerticesBranch = "GenVertices"
+    # branchnames for the signal
+    particlemergetool.signalGenParticles.Path = "GenParticles"
+    particlemergetool.signalGenVertices.Path = "GenVertices"
+    # branchnames for the output
+    particlemergetool.mergedGenParticles.Path = "pileupGenParticles"
+    particlemergetool.mergedGenVertices.Path = "pileupGenVertices"
+    
+    # edm data from simulation: hits and positioned hits
+    from Configurables import PileupCaloHitMergeTool
+    ecalbarrelmergetool = PileupCaloHitMergeTool("ECalBarrelHitMerge")
+    ecalbarrelmergetool.pileupHitsBranch = "mergedECalBarrelCells"
+    ecalbarrelmergetool.signalHits = "ECalBarrelCells"
+    ecalbarrelmergetool.mergedHits = "pileupECalBarrelCells"
+
+   # edm data from simulation: hits and positioned hits
+    hcalbarrelmergetool = PileupCaloHitMergeTool("HCalBarrelHitMerge")
+    hcalbarrelmergetool.pileupHitsBranch = "mergedHCalBarrelCells"
+    hcalbarrelmergetool.signalHits = "HCalBarrelCells"
+    hcalbarrelmergetool.mergedHits = "pileupHCalBarrelCells"
+    
+    # use the pileuptool to specify the number of pileup
+    from Configurables import ConstPileUp
+    pileuptool = ConstPileUp("MyPileupTool", numPileUpEvents=1)
+    
+    # algorithm for the overlay
+    from Configurables import PileupOverlayAlg
+    overlay = PileupOverlayAlg()
+    overlay.pileupFilenames = pileupFilenames
+    overlay.randomizePileup = True
+    overlay.mergeTools = [
+        "PileupCaloHitMergeTool/ECalBarrelHitMerge",
+        "PileupCaloHitMergeTool/HCalBarrelHitMerge"
+        ]
+    overlay.PileUpTool = pileuptool
+
+    inputCellCollectionECalBarrel = "pileupECalBarrelCells"
+    inputCellCollectionHCalBarrel = "pileupHCalBarrelCells"
+    
+##############################################################################################################
 #######                                       CELL POSITIONS  TOOLS                              #############
 ##############################################################################################################
 
 #Configure tools for calo cell positions
-from Configurables import CellPositionsECalBarrelTool, CellPositionsHCalBarrelTool, CellPositionsHCalBarrelNoSegTool, CellPositionsCaloDiscsTool, CellPositionsTailCatcherTool
+from Configurables import CellPositionsECalBarrelTool, CellPositionsHCalBarrelNoSegTool, CellPositionsCaloDiscsTool, CellPositionsTailCatcherTool
 ECalBcells = CellPositionsECalBarrelTool("CellPositionsECalBarrel",
                                          readoutName = ecalBarrelReadoutName,
                                          OutputLevel = INFO)
@@ -186,6 +251,8 @@ if elNoise:
                                             hits="ECalBarrelCellsRedo",
                                             cells="ECalBarrelCellsNoise")
 
+    inputCellCollectionECalBarrel = "ECalBarrelCellsNoise"
+
     # HCal Barrel noise
     noiseHcal = NoiseCaloCellsFlatTool("HCalNoise", cellNoise = 0.009)
 
@@ -206,6 +273,8 @@ if elNoise:
     createHcalBarrelCells.hits.Path="HCalBarrelCells"
     createHcalBarrelCells.cells.Path="HCalBarrelCellsNoise"
 
+    inputCellCollectionECalBarrel = "HCalBarrelCellsNoise"
+
     # Create topo clusters
     from Configurables import CaloTopoClusterInputTool, CaloTopoCluster
     createTopoInputNoise = CaloTopoClusterInputTool("CreateTopoInputNoise",
@@ -217,10 +286,10 @@ if elNoise:
                                                     hcalEndcapReadoutName = "",
                                                     hcalFwdReadoutName = "",
                                                     OutputLevel = INFO)
-    createTopoInputNoise.ecalBarrelCells.Path = "ECalBarrelCellsNoise"
+    createTopoInputNoise.ecalBarrelCells.Path = inputCellCollectionECalBarrel
     createTopoInputNoise.ecalEndcapCells.Path = "emptyCaloCells"
     createTopoInputNoise.ecalFwdCells.Path = "emptyCaloCells"
-    createTopoInputNoise.hcalBarrelCells.Path = "HCalBarrelCellsNoise"
+    createTopoInputNoise.hcalBarrelCells.Path = inputCellCollectionHCalBarrel
     createTopoInputNoise.hcalExtBarrelCells.Path = "emptyCaloCells"
     createTopoInputNoise.hcalEndcapCells.Path = "emptyCaloCells"
     createTopoInputNoise.hcalFwdCells.Path = "emptyCaloCells"
@@ -294,6 +363,8 @@ if puNoise:
                                             hits="ECalBarrelCellsRedo",
                                             cells="ECalBarrelCellsNoise")
     
+    inputCellCollectionECalBarrel = "ECalBarrelCellsNoise"
+
     # HCal Barrel noise
     noiseHcal = NoiseCaloCellsFromFileTool("NoiseHCalBarrel",
                                            readoutName = hcalBarrelReadoutName,
@@ -321,6 +392,8 @@ if puNoise:
     createHcalBarrelCells.hits.Path="HCalBarrelCells"
     createHcalBarrelCells.cells.Path="HCalBarrelCellsNoise"
     
+    inputCellCollectionHCalBarrel = "HCalBarrelCellsNoise"
+   
     # Create topo clusters
     from Configurables import CaloTopoClusterInputTool, CaloTopoCluster
     createTopoInputNoise = CaloTopoClusterInputTool("CreateTopoInputNoise",
@@ -332,10 +405,10 @@ if puNoise:
                                                     hcalEndcapReadoutName = "",
                                                     hcalFwdReadoutName = "",
                                                     OutputLevel = DEBUG)
-    createTopoInputNoise.ecalBarrelCells.Path = "ECalBarrelCellsNoise"
+    createTopoInputNoise.ecalBarrelCells.Path = inputCellCollectionECalBarrel
     createTopoInputNoise.ecalEndcapCells.Path = "emptyCaloCells"
     createTopoInputNoise.ecalFwdCells.Path = "emptyCaloCells"
-    createTopoInputNoise.hcalBarrelCells.Path = "HCalBarrelCellsNoise"
+    createTopoInputNoise.hcalBarrelCells.Path =     inputCellCollectionHCalBarrel
     createTopoInputNoise.hcalExtBarrelCells.Path = "emptyCaloCells"
     createTopoInputNoise.hcalEndcapCells.Path = "emptyCaloCells"
     createTopoInputNoise.hcalFwdCells.Path = "emptyCaloCells"
@@ -394,10 +467,10 @@ createTopoInput = CaloTopoClusterInputTool("CreateTopoInput",
                                            hcalEndcapReadoutName = "",
                                            hcalFwdReadoutName = "",
                                            OutputLevel = INFO)
-createTopoInput.ecalBarrelCells.Path = "ECalBarrelCellsRedo"
+createTopoInput.ecalBarrelCells.Path = inputCellCollectionECalBarrel
 createTopoInput.ecalEndcapCells.Path = "emptyCaloCells"
 createTopoInput.ecalFwdCells.Path = "emptyCaloCells"
-createTopoInput.hcalBarrelCells.Path = "HCalBarrelCells"
+createTopoInput.hcalBarrelCells.Path = inputCellCollectionHCalBarrel
 createTopoInput.hcalExtBarrelCells.Path = "emptyCaloCells"
 createTopoInput.hcalEndcapCells.Path = "emptyCaloCells"
 createTopoInput.hcalFwdCells.Path = "emptyCaloCells"
@@ -442,6 +515,8 @@ out = PodioOutput("out", OutputLevel=DEBUG)
 out.outputCommands = ["drop *", "keep GenParticles", "keep GenVertices", "keep TrackerPositionedHits", "keep caloClustersBarrel", "keep caloClusterBarrelCells", "keep caloClusterBarrelCellPositions",]
 out.filename = output_name
 
+if addPUevents:
+    out.outputCommands += ["keep pileupECalBarrelCells", "keep pileupHCalBarrelCells"]
 if elNoise or puNoise:
     out.outputCommands += ["keep ECalBarrelCellsNoise", "keep HCalBarrelCellsNoise", "keep caloClustersBarrelNoise","keep caloClusterBarrelNoiseCells",  "keep caloClusterBarrelCellPositions"]
 out.filename = output_name
@@ -459,7 +534,10 @@ list_of_algorithms = [podioinput,
                       recreateEcalBarrelCells,
                       createemptycells]
 
-if elNoise or puNoise:
+if addPUevents:
+     list_of_algorithms += [overlay]
+   
+elif elNoise or puNoise:
     list_of_algorithms += [createEcalBarrelCells, createHcalBarrelCells, createTopoClustersNoise, positionsClusterBarrelNoise]
 
 else:
