@@ -64,14 +64,14 @@ from Gaudi.Configuration import *
 detectors_to_use=[path_to_detector+'/Detector/DetFCChhBaseline1/compact/FCChh_DectEmptyMaster.xml',
                   path_to_detector+'/Detector/DetFCChhTrackerTkLayout/compact/Tracker.xml',
                   path_to_detector+'/Detector/DetFCChhECalInclined/compact/FCChh_ECalBarrel_withCryostat.xml',
-                  path_to_detector+'/Detector/DetFCChhHCalTile/compact/FCChh_HCalBarrel_TileCal.xml']
+                  path_to_detector+'/Detector/DetFCChhHCalTile/compact/FCChh_HCalBarrel_TileCal.xml',
+                  path_to_detector+'/Detector/DetFCChhCalDiscs/compact/Endcaps_coneCryo.xml',
+                  path_to_detector+'/Detector/DetFCChhCalDiscs/compact/Forward_coneCryo.xml',
+                  path_to_detector+'/Detector/DetFCChhBaseline1/compact/FCChh_Solenoids.xml',
+                  path_to_detector+'/Detector/DetFCChhBaseline1/compact/FCChh_Shielding.xml']
+
 if not noise:
     detectors_to_use += [path_to_detector+'/Detector/DetFCChhHCalTile/compact/FCChh_HCalExtendedBarrel_TileCal.xml']
-    
-detectors_to_use += [path_to_detector+'/Detector/DetFCChhCalDiscs/compact/Endcaps_coneCryo.xml',
-                     path_to_detector+'/Detector/DetFCChhCalDiscs/compact/Forward_coneCryo.xml',
-                     path_to_detector+'/Detector/DetFCChhBaseline1/compact/FCChh_Solenoids.xml',
-                     path_to_detector+'/Detector/DetFCChhBaseline1/compact/FCChh_Shielding.xml']
 
 from Configurables import GeoSvc
 geoservice = GeoSvc("GeoSvc", detectors = detectors_to_use)
@@ -218,7 +218,7 @@ if noise:
     from Configurables import CreateCaloClustersSlidingWindow, CaloTowerTool
     from GaudiKernel.PhysicalConstants import pi
     towersNoise = CaloTowerTool("towersNoise",
-                           deltaEtaTower = 0.01, deltaPhiTower = 2*pi/256.,
+                           deltaEtaTower = 0.01, deltaPhiTower = 2*pi/704.,
                            ecalBarrelReadoutName = ecalBarrelReadoutNamePhiEta,
                            ecalEndcapReadoutName = ecalEndcapReadoutName,
                            ecalFwdReadoutName = ecalFwdReadoutName,
@@ -280,7 +280,7 @@ outhits = "newHCalExtBarrelCells")
 from Configurables import CreateCaloClustersSlidingWindow, CaloTowerTool
 from GaudiKernel.PhysicalConstants import pi
 towers = CaloTowerTool("towers",
-                       deltaEtaTower = 0.01, deltaPhiTower = 2*pi/256.,
+                       deltaEtaTower = 0.01, deltaPhiTower = 2*pi/704.,
                        ecalBarrelReadoutName = ecalBarrelReadoutNamePhiEta,
                        ecalEndcapReadoutName = ecalEndcapReadoutName,
                        ecalFwdReadoutName = ecalFwdReadoutName,
