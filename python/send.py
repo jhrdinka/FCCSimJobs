@@ -110,6 +110,8 @@ def getJobInfo(argv):
             job_type = "reco/topoClusters/electronicsNoise"
         elif '--addPileupNoise' in argv:
             job_type = "reco/topoClusters/pileupNoise/"
+        elif '--addPileupToSignal' in argv:
+            job_type = "reco/topoClusters/electronicsNoise"
         else:
             job_type = "reco/topoClusters/noNoise"
         short_job_type = 'recTopo'
@@ -179,6 +181,7 @@ if __name__=="__main__":
     parser.add_argument("--addPileupNoise", action='store_true', help="Add pile-up noise in qudrature to electronics noise")
     parser.add_argument('--pileup', type=int,  required = '--mergePileup' in sys.argv or '--addPileupNoise' in sys.argv or '--addPileupToSignal' in sys.argv, help='Pileup')
     parser.add_argument("--tripletTracker", action="store_true", help="Use triplet tracker layout instead of baseline")
+    parser.add_argument('--addPileupToSignal', action="store_true", help='Add PU events to signal.')
 
     default_options,job_type,short_job_type,sim = getJobInfo(sys.argv)
     parser.add_argument('--jobOptions', type=str, default = default_options, help='Name of the job options run by FCCSW (default config/geantSim.py')
@@ -214,7 +217,6 @@ if __name__=="__main__":
     recoTopoClusterGroup.add_argument('--sigma1', type=int, default=4, help='Energy threshold [in number of sigmas] for seeding')
     recoTopoClusterGroup.add_argument('--sigma2', type=int, default=2, help='Energy threshold [in number of sigmas] for neighbours')
     recoTopoClusterGroup.add_argument('--sigma3', type=int, default=0, help='Energy threshold [in number of sigmas] for last neighbours')
-    recoTopoClusterGroup.add_argument("--addPileupToSignal", action='store_true', help="Add radomly PU evetnts to signal")
 
     args, _ = parser.parse_known_args()
 
