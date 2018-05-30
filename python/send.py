@@ -324,7 +324,7 @@ if __name__=="__main__":
             pt = args.pt
             print "LHE: ", LHE
             print "jet pt: ", pt
-            job_dir += "etaTo0.5/" + str(pt) + "GeV/"
+            job_dir += "etaTo"+str(args.etaMax)+"/" + str(pt) + "GeV/"
         else:
             LHE = False
             job_dir += "etaFull/"

@@ -251,8 +251,6 @@ if elNoise:
                                             hits="ECalBarrelCellsRedo",
                                             cells="ECalBarrelCellsNoise")
 
-    inputCellCollectionECalBarrel = "ECalBarrelCellsNoise"
-
     # HCal Barrel noise
     noiseHcal = NoiseCaloCellsFlatTool("HCalNoise", cellNoise = 0.009)
 
@@ -273,8 +271,6 @@ if elNoise:
     createHcalBarrelCells.hits.Path="HCalBarrelCells"
     createHcalBarrelCells.cells.Path="HCalBarrelCellsNoise"
 
-    inputCellCollectionECalBarrel = "HCalBarrelCellsNoise"
-
     # Create topo clusters
     from Configurables import CaloTopoClusterInputTool, CaloTopoCluster
     createTopoInputNoise = CaloTopoClusterInputTool("CreateTopoInputNoise",
@@ -286,10 +282,10 @@ if elNoise:
                                                     hcalEndcapReadoutName = "",
                                                     hcalFwdReadoutName = "",
                                                     OutputLevel = INFO)
-    createTopoInputNoise.ecalBarrelCells.Path = inputCellCollectionECalBarrel
+    createTopoInputNoise.ecalBarrelCells.Path = "ECalBarrelCellsNoise"
     createTopoInputNoise.ecalEndcapCells.Path = "emptyCaloCells"
     createTopoInputNoise.ecalFwdCells.Path = "emptyCaloCells"
-    createTopoInputNoise.hcalBarrelCells.Path = inputCellCollectionHCalBarrel
+    createTopoInputNoise.hcalBarrelCells.Path = "HCalBarrelCellsNoise"
     createTopoInputNoise.hcalExtBarrelCells.Path = "emptyCaloCells"
     createTopoInputNoise.hcalEndcapCells.Path = "emptyCaloCells"
     createTopoInputNoise.hcalFwdCells.Path = "emptyCaloCells"
@@ -363,8 +359,6 @@ if puNoise:
                                             hits="ECalBarrelCellsRedo",
                                             cells="ECalBarrelCellsNoise")
     
-    inputCellCollectionECalBarrel = "ECalBarrelCellsNoise"
-
     # HCal Barrel noise
     noiseHcal = NoiseCaloCellsFromFileTool("NoiseHCalBarrel",
                                            readoutName = hcalBarrelReadoutName,
@@ -391,9 +385,7 @@ if puNoise:
                                             OutputLevel = INFO)
     createHcalBarrelCells.hits.Path="HCalBarrelCells"
     createHcalBarrelCells.cells.Path="HCalBarrelCellsNoise"
-    
-    inputCellCollectionHCalBarrel = "HCalBarrelCellsNoise"
-   
+       
     # Create topo clusters
     from Configurables import CaloTopoClusterInputTool, CaloTopoCluster
     createTopoInputNoise = CaloTopoClusterInputTool("CreateTopoInputNoise",
@@ -405,10 +397,10 @@ if puNoise:
                                                     hcalEndcapReadoutName = "",
                                                     hcalFwdReadoutName = "",
                                                     OutputLevel = DEBUG)
-    createTopoInputNoise.ecalBarrelCells.Path = inputCellCollectionECalBarrel
+    createTopoInputNoise.ecalBarrelCells.Path = "ECalBarrelCellsNoise"
     createTopoInputNoise.ecalEndcapCells.Path = "emptyCaloCells"
     createTopoInputNoise.ecalFwdCells.Path = "emptyCaloCells"
-    createTopoInputNoise.hcalBarrelCells.Path =     inputCellCollectionHCalBarrel
+    createTopoInputNoise.hcalBarrelCells.Path =     "HCalBarrelCellsNoise"
     createTopoInputNoise.hcalExtBarrelCells.Path = "emptyCaloCells"
     createTopoInputNoise.hcalEndcapCells.Path = "emptyCaloCells"
     createTopoInputNoise.hcalFwdCells.Path = "emptyCaloCells"
@@ -456,6 +448,10 @@ if puNoise:
 readNoNoisyCellsMap = TopoCaloNoisyCells("ReadNoNoisyCellsMap",
                                          fileName = "/afs/cern.ch/work/c/cneubuse/public/FCChh/cellNoise_map_segHcal_constNoiseLevel.root",
                                          OutputLevel = DEBUG)
+
+print "ECal cell collection used in Topo-clustering: ", inputCellCollectionECalBarrel
+print "HCal cell collection used in Topo-clustering: ", inputCellCollectionHCalBarrel
+
 # Create topo clusters
 from Configurables import CaloTopoClusterInputTool, CaloTopoCluster, TopoCaloNeighbours
 createTopoInput = CaloTopoClusterInputTool("CreateTopoInput",
@@ -535,7 +531,7 @@ list_of_algorithms = [podioinput,
                       createemptycells]
 
 if addPUevents:
-     list_of_algorithms += [overlay]
+     list_of_algorithms += [overlay, createTopoClusters, positionsClusterBarrel]
    
 elif elNoise or puNoise:
     list_of_algorithms += [createEcalBarrelCells, createHcalBarrelCells, createTopoClustersNoise, positionsClusterBarrelNoise]
