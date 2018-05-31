@@ -12,8 +12,7 @@ simparser.add_argument('--sigma1', type=int, default=4, help='Energy threshold [
 simparser.add_argument('--sigma2', type=int, default=2, help='Energy threshold [in number of sigmas] for neighbours')
 simparser.add_argument('--sigma3', type=int, default=0, help='Energy threshold [in number of sigmas] for last neighbours')
 simparser.add_argument('--detectorPath', type=str, help='Path to detectors', default = "/cvmfs/fcc.cern.ch/sw/releases/0.9.1/x86_64-slc6-gcc62-opt/linux-scientificcernslc6-x86_64/gcc-6.2.0/fccsw-0.9.1-c5dqdyv4gt5smfxxwoluqj2pjrdqvjuj")
-simparser.add_argument("--addPileupToSignal", action='store_true', help="Add pileup events to signal (default: false)")
-simparser.add_argument('--inPileupFileNames',type=str, nargs = "+", help='Name of the pileup input file')
+simparser.add_argument("--pileup", type=int, help="Added pileup events to signal", default=0)
 
 simargs, _ = simparser.parse_known_args()
 
@@ -23,6 +22,7 @@ print "=================================="
 num_events = 1 #simargs.numEvents
 input_name = simargs.inName
 output_name = simargs.outName
+addedPU = simargs.pileup
 elNoise = simargs.addElectronicsNoise
 puNoise = simargs.addPileupNoise
 puEvents = simargs.mu
@@ -30,7 +30,6 @@ sigma1 = simargs.sigma1
 sigma2 = simargs.sigma2
 sigma3 = simargs.sigma3
 path_to_detector = simargs.detectorPath
-addPUevents = simargs.addPileupToSignal
 
 print "number of events = ", num_events
 print "input name: ", input_name
@@ -38,22 +37,10 @@ print "output name: ", output_name
 print 'energy thresholds for reconstruction: ', sigma1, '-', sigma2, '-', sigma3
 print "detectors are taken from: ", path_to_detector
 
-print "add pileup events to signal: ", addPUevents
-input_pileup_name = []
-if addPUevents:
-    input_pileup_name = simargs.inPileupFileNames
-    print "PU", (puEvents)
-    print "Input file names: ", input_pileup_name
-    elNoise = True
-
 print "add electronic noise in Barrel: ", elNoise
 print "add pileup noise in Barrel: ", puNoise
 if puNoise:
     print 'assuming %i pileup events '%(puEvents)
-
-pileupFilenames = input_pileup_name
-import random
-random.shuffle(pileupFilenames)
 
 from Gaudi.Configuration import *
 ##############################################################################################################
@@ -118,60 +105,6 @@ podioevent = FCCDataSvc("EventDataSvc", input=input_name)
 podioinput = PodioInput("PodioReader", collections = ["ECalBarrelCells", "HCalBarrelCells","GenParticles","GenVertices"], OutputLevel = DEBUG)
 
 ##############################################################################################################
-#######                                       RECALIBRATE ECAL                                   #############
-##############################################################################################################
-
-from Configurables import CalibrateInLayersTool, CreateCaloCells
-recalibEcalBarrel = CalibrateInLayersTool("RecalibrateEcalBarrel",
-                                          samplingFraction = [0.299654475899/0.12125] + [0.148166996525/0.14283] + [0.163005489744/0.16354] + [0.176907220821/0.17662] + [0.189980731321/0.18867] + [0.202201963561/0.19890] + [0.214090761907/0.20637] + [0.224706564289/0.20802],
-                                          readoutName = ecalBarrelReadoutName,
-                                          layerFieldName = "layer")
-recreateEcalBarrelCells = CreateCaloCells("redoEcalBarrelCells",
-                                          doCellCalibration=True,
-                                          calibTool=recalibEcalBarrel,
-                                          addCellNoise=False, filterCellNoise=False)
-recreateEcalBarrelCells.hits.Path="ECalBarrelCells"
-recreateEcalBarrelCells.cells.Path="ECalBarrelCellsRedo"
-
-##############################################################################################################
-#######                                       ADD PILEUP EVENTS                              #############
-##############################################################################################################
-if addPUevents:
-    # edm data from simulation: hits and positioned hits
-    from Configurables import PileupCaloHitMergeTool
-    ecalbarrelmergetool = PileupCaloHitMergeTool("ECalBarrelHitMerge")
-    ecalbarrelmergetool.noPositionedHits = True
-    ecalbarrelmergetool.pileupHitsBranch = "mergedECalBarrelCells"
-    ecalbarrelmergetool.signalHits = "ECalBarrelCells"
-    ecalbarrelmergetool.mergedHits = "pileupECalBarrelCells"
-
-   # edm data from simulation: hits and positioned hits
-    hcalbarrelmergetool = PileupCaloHitMergeTool("HCalBarrelHitMerge")
-    hcalbarrelmergetool.noPositionedHits = True
-    hcalbarrelmergetool.pileupHitsBranch = "mergedHCalBarrelCells"
-    hcalbarrelmergetool.signalHits = "HCalBarrelCells"
-    hcalbarrelmergetool.mergedHits = "pileupHCalBarrelCells"
-    
-    # use the pileuptool to specify the number of pileup
-    from Configurables import ConstPileUp
-    pileuptool = ConstPileUp("MyPileupTool", numPileUpEvents=1)
-    
-    # algorithm for the overlay
-    from Configurables import PileupOverlayAlg
-    overlay = PileupOverlayAlg()
-    overlay.pileupFilenames = pileupFilenames
-    overlay.randomizePileup = True
-    overlay.mergeTools = [
-        "PileupCaloHitMergeTool/ECalBarrelHitMerge",
-        "PileupCaloHitMergeTool/HCalBarrelHitMerge"
-        ]
-    overlay.PileUpTool = pileuptool
-
-    inputCellCollectionECalBarrel = "pileupECalBarrelCells"
-    inputCellCollectionHCalBarrel = "pileupHCalBarrelCells"
-    inputNoisePerCell = "/afs/cern.ch/work/c/cneubuse/public/FCChh/inBfield/cellNoise_map_segHcal_noiseLevelElectronicsPileup_mu"+str(puEvents)+".root"
-
-##############################################################################################################
 #######                                       CELL POSITIONS  TOOLS                              #############
 ##############################################################################################################
 
@@ -218,9 +151,10 @@ readNeighboursMap = TopoCaloNeighbours("ReadNeighboursMap",
 ##############################################################################################################
 
 if elNoise:
+    inputNoisePerCell = "/afs/cern.ch/work/c/cneubuse/public/FCChh/cellNoise_map_segHcal_electronicsNoiseLevel.root"
     # Apply cell thresholds for electronics noise only if no pileup events have been merged
-    if not addPUevents:
-        inputNoisePerCell = "/afs/cern.ch/work/c/cneubuse/public/FCChh/cellNoise_map_segHcal_electronicsNoiseLevel.root"
+    if addedPU != 0:
+        inputNoisePerCell = "/afs/cern.ch/work/c/cneubuse/public/FCChh/inBfield/cellNoise_map_segHcal_noiseLevelElectronicsPileup_mu"+str(addedPU)+".root"
         
     from Configurables import CreateCaloCells, NoiseCaloCellsFromFileTool, TubeLayerPhiEtaCaloTool, CalibrateCaloHitsTool, NoiseCaloCellsFlatTool, NestedVolumesCaloTool
     # ECal Barrel noise
@@ -355,7 +289,7 @@ if puNoise:
                                             doCellCalibration=False, # already calibrated
                                             addCellNoise=True, filterCellNoise=False,
                                             noiseTool = noiseBarrel,
-                                            hits="ECalBarrelCellsRedo",
+                                            hits="ECalBarrelCells",
                                             cells="ECalBarrelCellsNoise")
     
     # HCal Barrel noise
@@ -511,8 +445,6 @@ out = PodioOutput("out", OutputLevel=DEBUG)
 out.outputCommands = ["drop *", "keep GenParticles", "keep GenVertices", "keep caloClustersBarrel", "keep caloClusterBarrelCells", "keep caloClusterBarrelCellPositions",]
 out.filename = output_name
 
-if addPUevents:
-    out.outputCommands += ["keep pileupECalBarrelCells", "keep pileupHCalBarrelCells"]
 if elNoise or puNoise:
     out.outputCommands += ["keep ECalBarrelCellsNoise", "keep HCalBarrelCellsNoise", "keep caloClustersBarrelNoise","keep caloClusterBarrelNoiseCells",  "keep caloClusterBarrelCellPositions"]
 out.filename = output_name
@@ -527,13 +459,9 @@ createemptycells.AuditExecute = True
 out.AuditExecute = True
 
 list_of_algorithms = [podioinput,
-                      recreateEcalBarrelCells,
                       createemptycells]
 
-if addPUevents:
-     list_of_algorithms += [overlay]
-   
-elif elNoise or puNoise:
+if elNoise or puNoise:
     list_of_algorithms += [createEcalBarrelCells, createHcalBarrelCells, createTopoClustersNoise, positionsClusterBarrelNoise]
 
 else:
