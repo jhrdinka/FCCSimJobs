@@ -136,19 +136,7 @@ recreateEcalBarrelCells.cells.Path="ECalBarrelCellsRedo"
 #######                                       ADD PILEUP EVENTS                              #############
 ##############################################################################################################
 if addPUevents:
-    # edm data from generation: particles and vertices
-    from Configurables import PileupParticlesMergeTool
-    particlemergetool = PileupParticlesMergeTool("ParticlesMerge")
-    # branchnames for the pileup
-    particlemergetool.genParticlesBranch = "GenParticles"
-    particlemergetool.genVerticesBranch = "GenVertices"
-    # branchnames for the signal
-    particlemergetool.signalGenParticles.Path = "GenParticles"
-    particlemergetool.signalGenVertices.Path = "GenVertices"
-    # branchnames for the output
-    particlemergetool.mergedGenParticles.Path = "pileupGenParticles"
-    particlemergetool.mergedGenVertices.Path = "pileupGenVertices"
-    
+
     # edm data from simulation: hits and positioned hits
     from Configurables import PileupCaloHitMergeTool
     ecalbarrelmergetool = PileupCaloHitMergeTool("ECalBarrelHitMerge")
@@ -230,6 +218,7 @@ readNeighboursMap = TopoCaloNeighbours("ReadNeighboursMap",
 ##############################################################################################################
 
 if elNoise:
+    # Apply cell thresholds for electronics noise only if no pileup events have been merged
     if not addPUevents:
         inputNoisePerCell = "/afs/cern.ch/work/c/cneubuse/public/FCChh/cellNoise_map_segHcal_electronicsNoiseLevel.root"
         
@@ -242,7 +231,7 @@ if elNoise:
                                              activeFieldName = "layer",
                                              addPileup = False,
                                              numRadialLayers = 8)
-
+    
     # add noise, create all existing cells in detector
     barrelGeometry = TubeLayerPhiEtaCaloTool("EcalBarrelGeo",
                                              readoutName = ecalBarrelReadoutName,
@@ -251,7 +240,7 @@ if elNoise:
                                              fieldNames = ["system"],
                                              fieldValues = [5],
                                              activeVolumesNumber = 8)
-
+    
     createEcalBarrelCells = CreateCaloCells("CreateECalBarrelCells",
                                             geometryTool = barrelGeometry,
                                             doCellCalibration=False, # already calibrated
@@ -262,7 +251,7 @@ if elNoise:
 
     # HCal Barrel noise
     noiseHcal = NoiseCaloCellsFlatTool("HCalNoise", cellNoise = 0.009)
-
+    
     hcalgeo = NestedVolumesCaloTool("HcalGeo",
                                     activeVolumeName = hcalVolumeName,
                                     activeFieldName = hcalIdentifierName,
@@ -279,7 +268,7 @@ if elNoise:
                                             OutputLevel = INFO)
     createHcalBarrelCells.hits.Path=inputCellCollectionHCalBarrel
     createHcalBarrelCells.cells.Path="HCalBarrelCellsNoise"
-
+    
     # Create topo clusters
     from Configurables import CaloTopoClusterInputTool, CaloTopoCluster
     createTopoInputNoise = CaloTopoClusterInputTool("CreateTopoInputNoise",
@@ -333,6 +322,7 @@ if elNoise:
                                                           hits = "caloClusterBarrelNoiseCells",
                                                           positionedHits = "caloClusterBarrelNoiseCellPositions",
                                                           OutputLevel = INFO)
+
 ##############################################################################################################
 #######                          NOISE/NO NOISE TOOL FOR CLUSTER THRESHOLDS                      #############
 ##############################################################################################################
@@ -556,4 +546,4 @@ ApplicationMgr(
     EvtSel = 'NONE',
     EvtMax   = num_events,
     ExtSvc = [geoservice, podioevent, audsvc],
-    )
+    OutputLevel = VERBOSE)
