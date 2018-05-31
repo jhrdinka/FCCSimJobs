@@ -39,6 +39,7 @@ print 'energy thresholds for reconstruction: ', sigma1, '-', sigma2, '-', sigma3
 print "detectors are taken from: ", path_to_detector
 
 print "add pileup events to signal: ", addPUevents
+input_pileup_name = []
 if addPUevents:
     input_pileup_name = simargs.inPileupFileNames
     print "PU", (puEvents)
@@ -136,7 +137,6 @@ recreateEcalBarrelCells.cells.Path="ECalBarrelCellsRedo"
 #######                                       ADD PILEUP EVENTS                              #############
 ##############################################################################################################
 if addPUevents:
-
     # edm data from simulation: hits and positioned hits
     from Configurables import PileupCaloHitMergeTool
     ecalbarrelmergetool = PileupCaloHitMergeTool("ECalBarrelHitMerge")
@@ -533,7 +533,7 @@ list_of_algorithms = [podioinput,
 if addPUevents:
      list_of_algorithms += [overlay]
    
-if elNoise or puNoise:
+elif elNoise or puNoise:
     list_of_algorithms += [createEcalBarrelCells, createHcalBarrelCells, createTopoClustersNoise, positionsClusterBarrelNoise]
 
 else:

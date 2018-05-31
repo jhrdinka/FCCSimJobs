@@ -59,7 +59,7 @@ tailCatcherReadoutName = "Muons_Readout"
 from Configurables import ApplicationMgr, FCCDataSvc, PodioInput, PodioOutput
 podioevent = FCCDataSvc("EventDataSvc", input=input_name)
 
-coll_names_read = [prefix+"ECalBarrelCells", prefix+"HCalBarrelCells", prefix+"HCalExtBarrelCells", prefix+"ECalEndcapCells", prefix+"HCalEndcapCells", prefix+"ECalFwdCells", prefix+"HCalFwdCells"]
+coll_names_read = [prefix+"ECalBarrelCells", prefix+"HCalBarrelCells", prefix+"HCalExtBarrelCells", prefix+"ECalEndcapCells", prefix+"HCalEndcapCells", prefix+"ECalFwdCells", prefix+"HCalFwdCells", prefix+"GenParticles", prefix+"GenVertices"]
 if addMuons:
     coll_names_read += ["TailCatcherCells"]
 podioinput = PodioInput("PodioReader", collections = coll_names_read, OutputLevel = DEBUG)
