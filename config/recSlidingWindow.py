@@ -24,12 +24,18 @@ noise = simargs.addElectronicsNoise
 path_to_detector = simargs.detectorPath
 winEta = simargs.winEta
 winPhi = simargs.winPhi
+winEtaSeed = int(math.floor(winEta*2./4.))
+winPhiSeed = int(math.floor(winPhi*2./4.))
 winEtaPos = int(math.floor(winEta*2./4.))
 winPhiPos = int(math.floor(winPhi*2./4.))
 winEtaDup = int(math.floor(winEta*3./4.))
 winPhiDup = int(math.floor(winPhi*2./4.))
 
 ## make sure that window size is odd
+if winEtaSeed %2 == 0:
+    winEtaSeed = winEtaSeed +1
+if winPhiSeed %2 == 0:
+    winPhiSeed = winPhiSeed +1
 if winEtaPos %2 == 0:
     winEtaPos = winEtaPos +1 
 if winPhiPos %2 == 0:
@@ -46,8 +52,8 @@ print "input name: ", input_name
 print "output name: ", output_name
 print "electronic noise in E and HCAL: ", noise
 print "detectors are taken from: ", path_to_detector
-print "cluster eta size: ", winEta
-print "cluster phi size: ", winPhi
+print "seed cluster eta size: ", winEtaSeed
+print "seed cluster phi size: ", winPhiSeed
 print "pos cluster eta size: ", winEtaPos
 print "pos cluster phi size: ", winPhiPos
 print "dup cluster eta size: ", winEtaDup
@@ -235,7 +241,7 @@ if noise:
     towersNoise.hcalFwdCells.Path = "HCalFwdCells"
     createclustersNoise = CreateCaloClustersSlidingWindow("CreateCaloClustersNoise",
                                                           towerTool = towersNoise,
-                                                          nEtaWindow = winEta, nPhiWindow = winPhi,
+                                                          nEtaWindow = winEtaSeed, nPhiWindow = winPhiSeed,
                                                           nEtaPosition = winEtaPos, nPhiPosition = winPhiPos,
                                                           nEtaDuplicates = winEtaDup, nPhiDuplicates = winPhiDup,
                                                           nEtaFinal = winEta, nPhiFinal = winPhi,
@@ -299,7 +305,7 @@ towers.hcalFwdCells.Path = "HCalFwdCells"
 
 createclusters = CreateCaloClustersSlidingWindow("CreateCaloClusters",
                                                  towerTool = towers,
-                                                 nEtaWindow = winEta, nPhiWindow = winPhi,
+                                                 nEtaWindow = winEtaSeed, nPhiWindow = winPhiSeed,
                                                  nEtaPosition = winEtaPos, nPhiPosition = winPhiPos,
                                                  nEtaDuplicates = winEtaDup, nPhiDuplicates = winPhiDup,
                                                  nEtaFinal = winEta, nPhiFinal = winPhi,
