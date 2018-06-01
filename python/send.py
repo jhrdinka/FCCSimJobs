@@ -562,7 +562,12 @@ if __name__=="__main__":
             if not ut.dir_exist(ntup_path):
                 os.system("mkdir -p %s"%(ntup_path))
             frun.write('python /afs/cern.ch/work/h/helsens/public/FCCutils/eoscopy.py $JOBDIR/clusters.root %s/%s\n'%(ntup_path, outfile))
-            
+            if args.recSlidingWindow:
+                analysis_path = outdir.replace('/reco', '/ana')
+                if not ut.dir_exist(analysis_path):
+                    os.system("mkdir -p %s"%(analysis_path))
+                frun.write('python /afs/cern.ch/work/h/helsens/public/FCCutils/eoscopy.py $JOBDIR/hist_%s %s\n'%(outfile, analysis_path))
+
         if not args.no_eoscopy:
           frun.write('python /afs/cern.ch/work/h/helsens/public/FCCutils/eoscopy.py $JOBDIR/%s %s\n'%(outfile,outdir))
           frun.write('rm $JOBDIR/%s \n'%(outfile))
