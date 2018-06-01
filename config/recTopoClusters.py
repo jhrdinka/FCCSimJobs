@@ -19,7 +19,7 @@ simargs, _ = simparser.parse_known_args()
 print "=================================="
 print "==      GENERAL SETTINGS       ==="
 print "=================================="
-num_events = 1 #simargs.numEvents
+num_events = simargs.numEvents
 input_name = simargs.inName
 output_name = simargs.outName
 addedPU = simargs.pileup
@@ -474,4 +474,4 @@ ApplicationMgr(
     EvtSel = 'NONE',
     EvtMax   = num_events,
     ExtSvc = [geoservice, podioevent, audsvc],
-    OutputLevel = VERBOSE)
+    OutputLevel = INFO)
