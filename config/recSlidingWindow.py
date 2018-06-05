@@ -10,7 +10,7 @@ simparser.add_argument("--addElectronicsNoise", action='store_true', help="Add e
 simparser.add_argument('--winEta', type=int, default=7, help='Size of the final cluster in eta')
 simparser.add_argument('--winPhi', type=int, default=19, help='Size of the final cluster in phi')
 simparser.add_argument('--enThreshold', type=float, default=3., help='Energy threshold of the seeding clusters [GeV]')
-simparser.add_argument('--mu', type=int, default=1000, help='Pileup scenario')
+simparser.add_argument('--mu', type=int, default=0, help='Pileup scenario')
 
 simargs, _ = simparser.parse_known_args()
 
