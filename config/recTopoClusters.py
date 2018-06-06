@@ -1,4 +1,4 @@
-import argparse, os
+import argparse
 simparser = argparse.ArgumentParser()
 
 simparser.add_argument('--inName', type=str, help='Name of the input file', required=True)
@@ -165,7 +165,7 @@ if elNoise:
                                              activeFieldName = "layer",
                                              addPileup = False,
                                              numRadialLayers = 8)
-    
+
     # add noise, create all existing cells in detector
     barrelGeometry = TubeLayerPhiEtaCaloTool("EcalBarrelGeo",
                                              readoutName = ecalBarrelReadoutName,
@@ -223,8 +223,7 @@ if elNoise:
     createTopoInputNoise.hcalFwdCells.Path = "emptyCaloCells"
 
     readNoisyCellsMap = TopoCaloNoisyCells("ReadNoisyCellsMap",
-                                           fileName = inputNoisePerCell,
-                                           OutputLevel = DEBUG)
+                                           fileName = inputNoisePerCell)
 
     # Topo-Cluster Algorithm
     # Seed and neighbour thresholds 4 - 2 - 0 w/noise
@@ -473,5 +472,5 @@ ApplicationMgr(
     TopAlg = list_of_algorithms,
     EvtSel = 'NONE',
     EvtMax   = num_events,
-    ExtSvc = [geoservice, podioevent, audsvc],
-    OutputLevel = INFO)
+    ExtSvc = [geoservice, podioevent, audsvc]
+)

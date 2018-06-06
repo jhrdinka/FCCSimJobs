@@ -4,7 +4,7 @@ simparser = argparse.ArgumentParser()
 simparser.add_argument('--inName', type=str, help='Name of the input file', required=True)
 simparser.add_argument('--outName', type=str, help='Name of the output file', required=True)
 simparser.add_argument('-N','--numEvents',  type=int, help='Number of simulation events to run', required=True)
-simparser.add_argument("--mu", type=int, help="Number of pileup-events", default=0)
+simparser.add_argument("--pileup", type=int, help="Number of pileup-events", default=0)
 simparser.add_argument('--inPileupFileNames',type=str, nargs = "+", help='Name of the pileup input file',required=True)
 
 simargs, _ = simparser.parse_known_args()
@@ -15,7 +15,7 @@ print "=================================="
 num_events = simargs.numEvents
 input_name = simargs.inName
 output_name = simargs.outName
-puEvents = simargs.mu
+puEvents = simargs.pileup
 
 print "number of events = ", num_events
 print "input name: ", input_name
@@ -23,7 +23,7 @@ print "output name: ", output_name
 
 input_pileup_name = []
 input_pileup_name = simargs.inPileupFileNames
-print 'aadd %i pileup events '%(puEvents)
+print 'add %i pileup events '%(puEvents)
 print "Pileup input file names: ", input_pileup_name
 
 pileupFilenames = input_pileup_name

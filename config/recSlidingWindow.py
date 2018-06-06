@@ -10,7 +10,7 @@ simparser.add_argument("--addElectronicsNoise", action='store_true', help="Add e
 simparser.add_argument('--winEta', type=int, default=7, help='Size of the final cluster in eta')
 simparser.add_argument('--winPhi', type=int, default=19, help='Size of the final cluster in phi')
 simparser.add_argument('--enThreshold', type=float, default=3., help='Energy threshold of the seeding clusters [GeV]')
-simparser.add_argument('--mu', type=int, default=0, help='Pileup scenario')
+simparser.add_argument('--mu', type=int, default=1000, help='Pileup scenario')
 
 simargs, _ = simparser.parse_known_args()
 
@@ -198,12 +198,10 @@ if noise:
     #                                         noiseTool = noiseEndcap,
     #                                         hits="ECalEndcapCells",
     #                                         cells="ECalEndcapCellsNoise")
- 
-
 
     # additionally for HCal
     from Configurables import CreateVolumeCaloPositions
-    positionsHcalNoise = CreateVolumeCaloPositions("positionsHcalNoise", OutputLevel = INFO)
+    positionsHcalNoise = CreateVolumeCaloPositions("positionsHcalNoise")
     positionsHcalNoise.hits.Path = "HCalBarrelCellsNoise"
     positionsHcalNoise.positionedHits.Path = "HCalBarrelPositionsNoise"
     
@@ -229,7 +227,7 @@ if noise:
                            ecalEndcapReadoutName = ecalEndcapReadoutName,
                            ecalFwdReadoutName = ecalFwdReadoutName,
                            hcalBarrelReadoutName = hcalBarrelPhiEtaReadoutName,
-                           hcalExtBarrelReadoutName = hcalExtBarrelPhiEtaReadoutName,
+                           hcalExtBarrelReadoutName = "",
                            hcalEndcapReadoutName = hcalEndcapReadoutName,
                            hcalFwdReadoutName = hcalFwdReadoutName)
     towersNoise.ecalBarrelCells.Path = "ECalBarrelCellsNoise"
@@ -245,16 +243,15 @@ if noise:
                                                           nEtaPosition = winEtaPos, nPhiPosition = winPhiPos,
                                                           nEtaDuplicates = winEtaDup, nPhiDuplicates = winPhiDup,
                                                           nEtaFinal = winEta, nPhiFinal = winPhi,
-                                                          energyThreshold = enThreshold,
-                                                          OutputLevel = INFO)
+                                                          energyThreshold = enThreshold)
     createclustersNoise.clusters.Path = "caloClustersNoise"
 
 # additionally for HCal
 from Configurables import CreateVolumeCaloPositions
-positionsHcal = CreateVolumeCaloPositions("positionsHcal", OutputLevel = INFO)
+positionsHcal = CreateVolumeCaloPositions("positionsHcal")
 positionsHcal.hits.Path = "HCalBarrelCells"
 positionsHcal.positionedHits.Path = "HCalBarrelPositions"
-positionsExtHcal = CreateVolumeCaloPositions("positionsExtHcal", OutputLevel = INFO)
+positionsExtHcal = CreateVolumeCaloPositions("positionsExtHcal")
 positionsExtHcal.hits.Path = "HCalExtBarrelCells"
 positionsExtHcal.positionedHits.Path = "HCalExtBarrelPositions"
 
@@ -267,7 +264,6 @@ resegmentHcal = RedoSegmentation("ReSegmentationHcal",
                              # new bitfield (readout), with new segmentation
                              newReadoutName = hcalBarrelPhiEtaReadoutName,
                              debugPrint = 10,
-                             OutputLevel = INFO,
                              inhits = "HCalBarrelPositions",
 outhits = "newHCalBarrelCells")
 resegmentExtHcal = RedoSegmentation("ReSegmentationExtHcal",
@@ -278,7 +274,6 @@ resegmentExtHcal = RedoSegmentation("ReSegmentationExtHcal",
                              # new bitfield (readout), with new segmentation
                              newReadoutName = hcalExtBarrelPhiEtaReadoutName,
                              debugPrint = 10,
-                             OutputLevel = INFO,
                              inhits = "HCalExtBarrelPositions",
 outhits = "newHCalExtBarrelCells")
 
@@ -309,8 +304,7 @@ createclusters = CreateCaloClustersSlidingWindow("CreateCaloClusters",
                                                  nEtaPosition = winEtaPos, nPhiPosition = winPhiPos,
                                                  nEtaDuplicates = winEtaDup, nPhiDuplicates = winPhiDup,
                                                  nEtaFinal = winEta, nPhiFinal = winPhi,
-                                                 energyThreshold = enThreshold,
-                                                 OutputLevel=INFO)
+                                                 energyThreshold = enThreshold)
 createclusters.clusters.Path = "caloClusters"
 
 # PODIO algorithm

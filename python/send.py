@@ -106,7 +106,7 @@ def getJobInfo(argv):
     elif '--addPileupToSignal' in argv:
         default_options = 'config/overlayPileupWithSignal.py'
         job_type = "simuPU"
-        short_job_type = "pileup"
+        short_job_type = "addPileup"
         return default_options,job_type,short_job_type,False
  
     elif '--recTopoClusters' in argv:
@@ -258,11 +258,11 @@ if __name__=="__main__":
     print 'FCCSim version: ',version
     magnetic_field = not args.bFieldOff
     b_field_str = "bFieldOn" if not args.bFieldOff else "bFieldOff"
-    num_events = args.numEvents if sim else -1
+    num_events = args.numEvents if sim else -1 # if reconstruction is done use -1 to run over all events in file
     num_jobs = args.numJobs
     job_options = args.jobOptions
     output_path = args.output
-    
+
     ## Use Pileup valid only in certain cases!
     if args.addPileupNoise: # pileup is used to specify level of the pileup noise
         job_type = job_type.replace("pileupNoise", "pileupNoise/PU"+str(args.pileup))
@@ -381,19 +381,17 @@ if __name__=="__main__":
         if instatus < num_jobs:
             num_jobs = instatus
             warning("Directory contains only " + str(instatus) + " files, using all for the reconstruction")
-
-    if args.addPileupToSignal: 
-        all_pileup_inputs=""
-        inputPileupID = os.path.join(yamldir, version, 'physics/MinBias/'+b_field_str+'/etaFull/simuPU'+str(args.pileup))
-        pileup_input_files = getInputFiles(inputPileupID)
-        for f in pileup_input_files:
-            all_pileup_inputs += " " + f # event pool = all inputs
     
-    # for the purpose of mixing pileup events all inputs must be passed to the config
+    # for the purpose of mixing pileup events (only or to signal) all inputs must be passed to the config
     # merging pileup events will be done randomly from a given event pool
-    if args.mergePileup:
+    if args.mergePileup or args.addPileupToSignal:
         all_inputs = ""
-        for f in input_files:
+        if args.addPileupToSignal: 
+            inputPileupID = os.path.join(yamldir, version, 'physics/MinBias/'+b_field_str+'/etaFull/simuPU'+str(args.pileup))
+            pileup_input_files = getInputFiles(inputPileupID)
+        else: 
+            pileup_input_files = input_files
+        for f in pileup_input_files:
             all_inputs += " " + f # event pool = all inputs
         seed=ut.getuid() # to generate new output name
         print 'seed  ',seed
@@ -437,8 +435,7 @@ if __name__=="__main__":
             outfile = infile
             print "Name of the input file: ", infile
             if args.addPileupToSignal :
-                pileupinfile = os.path.basename(pileup_input_files[i])
-                print "Name of the input file for pileup events: ", pileupinfile
+                print "Names of the input files for pileup events: ", pileup_input_files
 
             yamldir_process = '%s/%s'%(yamldir,uid)
             if not ut.dir_exist(yamldir_process):
@@ -493,9 +490,8 @@ if __name__=="__main__":
             common_fccsw_command += ' --physics'
         if '--local' in sys.argv:
             common_fccsw_command += ' --detectorPath ' + path_to_FCCSW
-        if args.physics:
-            if args.mergePileup or args.addPileupToSignal:
-                common_fccsw_command += ' --pileup ' + str(args.pileup)
+        if args.addPileupToSignal or  ( args.physics and args.mergePileup):
+            common_fccsw_command += ' --pileup ' + str(args.pileup)            
         if args.recPositions and args.pileup:
             common_fccsw_command += ' --prefixCollections merged '
         if args.recSlidingWindow:
@@ -550,7 +546,7 @@ if __name__=="__main__":
             if args.mergePileup:
                 frun.write('%s --inName %s\n'%(common_fccsw_command, all_inputs))
             elif args.addPileupToSignal:
-                frun.write('%s --inName %s --mu %i --inPileupFileNames %s\n'%( common_fccsw_command, input_files[i], args.pileup, all_pileup_inputs))
+                frun.write('%s --inName %s --inPileupFileNames %s\n'%( common_fccsw_command, input_files[i], all_inputs))
             else:
                 frun.write('%s --inName %s\n'%(common_fccsw_command, input_files[i]))
         if args.recPositions:
