@@ -147,6 +147,16 @@ This is something that can not be done centrally yet as I do not have rights to 
 
 Expert mode
 ===========
+check eos for a given process
+```
+python python/run.py --checkeos --version v03 --process physics/MinBias/bFieldOn/etaFull/simu
+```
+
+check eos for everything
+```
+python python/run.py --checkeos --version v03
+```
+
 check for a given process
 ```
 python python/run.py --check --version v03 --process physics/MinBias/bFieldOn/etaFull/simu
