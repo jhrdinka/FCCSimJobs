@@ -485,12 +485,12 @@ if __name__=="__main__":
         if args.noise:
             common_fccsw_command += ' --addElectronicsNoise'
         if args.addPileupNoise:
-            common_fccsw_command += ' --addPileupNoise --mu ' + str(args.pileup)
+            common_fccsw_command += ' --addPileupNoise --pileup ' + str(args.pileup)
         if args.physics:
             common_fccsw_command += ' --physics'
         if '--local' in sys.argv:
             common_fccsw_command += ' --detectorPath ' + path_to_FCCSW
-        if args.addPileupToSignal or  ( args.physics and args.mergePileup):
+        if args.physics and args.mergePileup:
             common_fccsw_command += ' --pileup ' + str(args.pileup)            
         if args.recPositions and args.pileup:
             common_fccsw_command += ' --prefixCollections merged '
@@ -498,6 +498,8 @@ if __name__=="__main__":
             common_fccsw_command += ' --winEta ' + str(args.winEta) + ' --winPhi ' + str(args.winPhi) + ' --enThreshold ' + str(args.enThreshold) + ' '
         if args.recTopoClusters:
             common_fccsw_command += ' --sigma1 ' + str(args.sigma1) + ' --sigma2 ' + str(args.sigma2) + ' --sigma3 ' + str(args.sigma3) + ' '
+            if args.pileup:
+                common_fccsw_command += ' --pileup ' + str(args.pileup)
         print '-------------------------------------'
         print common_fccsw_command
         print '-------------------------------------'
