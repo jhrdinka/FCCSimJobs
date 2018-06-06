@@ -5,9 +5,7 @@ import numpy as n
 import ROOT as r
 
 from ROOT import gSystem
-import platform, os
-if platform.system()=='Darwin':
-    gSystem.Load(os.environ['/cvmfs/sft.cern.ch/lcg/releases/DD4hep/01-05-2396f/x86_64-slc6-gcc62-opt/lib/'])
+gSystem.Load(os.environ['/cvmfs/sft.cern.ch/lcg/releases/DD4hep/01-05-2396f/x86_64-slc6-gcc62-opt/lib/'])
 result=gSystem.Load("libDDCorePlugins")
 from ROOT import dd4hep
 if result < 0:
