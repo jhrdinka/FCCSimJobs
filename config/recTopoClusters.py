@@ -7,7 +7,6 @@ simparser.add_argument('-N','--numEvents',  type=int, help='Number of simulation
 simparser.add_argument("--physics", action='store_true', help="Physics events")
 simparser.add_argument("--addElectronicsNoise", action='store_true', help="Add electronics noise (default: false)")
 simparser.add_argument("--addPileupNoise", action='store_true', help="Add pileup noise")
-simparser.add_argument("--mu", type=int, help="Number of pileup-events", default=0)
 simparser.add_argument('--sigma1', type=int, default=4, help='Energy threshold [in number of sigmas] for seeding')
 simparser.add_argument('--sigma2', type=int, default=2, help='Energy threshold [in number of sigmas] for neighbours')
 simparser.add_argument('--sigma3', type=int, default=0, help='Energy threshold [in number of sigmas] for last neighbours')
@@ -22,26 +21,30 @@ print "=================================="
 num_events = simargs.numEvents
 input_name = simargs.inName
 output_name = simargs.outName
-addedPU = simargs.pileup
 elNoise = simargs.addElectronicsNoise
 puNoise = simargs.addPileupNoise
-puEvents = simargs.mu
+puEvents = simargs.pileup
 sigma1 = simargs.sigma1
 sigma2 = simargs.sigma2
 sigma3 = simargs.sigma3
 path_to_detector = simargs.detectorPath
-
+addedPU = 0
 print "number of events = ", num_events
 print "input name: ", input_name
 print "output name: ", output_name
 print 'energy thresholds for reconstruction: ', sigma1, '-', sigma2, '-', sigma3
 print "detectors are taken from: ", path_to_detector
-print "added pileup: ",addedPU
 
 print "add electronic noise in Barrel: ", elNoise
 print "add pileup noise in Barrel: ", puNoise
 if puNoise:
-    print 'assuming %i pileup events '%(puEvents)
+    print 'adding noise corresponding to %i pileup events '%(puEvents)
+
+if not puNoise:
+    addedPU = simargs.pileup
+    print "added pileup: ",addedPU
+if addedPU!=0:
+    elNoise = True
 
 from Gaudi.Configuration import *
 ##############################################################################################################
@@ -107,7 +110,7 @@ if addedPU != 0:
     inputCellCollectionECalBarrel = "addedPUECalBarrelCells"   
     inputCellCollectionHCalBarrel = "addedPUHCalBarrelCells"
     
-podioinput = PodioInput("PodioReader", collections = [inputCellCollectionECalBarrel, inputCellCollectionHCalBarrel,"GenParticles","GenVertices"], OutputLevel = DEBUG)
+podioinput = PodioInput("PodioReader", collections = [inputCellCollectionECalBarrel, inputCellCollectionHCalBarrel, "GenParticles", "GenVertices"], OutputLevel = DEBUG)
 
 ##############################################################################################################
 #######                                       CELL POSITIONS  TOOLS                              #############
@@ -159,7 +162,7 @@ if elNoise:
     inputNoisePerCell = "/afs/cern.ch/work/c/cneubuse/public/FCChh/cellNoise_map_segHcal_electronicsNoiseLevel.root"
     # Apply cell thresholds for electronics noise only if no pileup events have been merged
     if addedPU != 0:
-        inputNoisePerCell = "/afs/cern.ch/work/c/cneubuse/public/FCChh/inBfield/cellNoise_map_forPU100_electronicsPileup_mu"+str(addedPU)+".root"
+        inputNoisePerCell = "/afs/cern.ch/work/c/cneubuse/public/FCChh/inBfield/cellNoise_map_forPU"+str(addedPU)+"_electronicsPileup.root"
         
     from Configurables import CreateCaloCells, NoiseCaloCellsFromFileTool, TubeLayerPhiEtaCaloTool, CalibrateCaloHitsTool, NoiseCaloCellsFlatTool, NestedVolumesCaloTool
     # ECal Barrel noise
@@ -167,6 +170,7 @@ if elNoise:
                                              readoutName = ecalBarrelReadoutName,
                                              noiseFileName = ecalBarrelNoisePath,
                                              elecNoiseHistoName = ecalBarrelNoiseHistName,
+                                             cellPositionsTool = ECalBcells,
                                              activeFieldName = "layer",
                                              addPileup = False,
                                              numRadialLayers = 8)
@@ -243,8 +247,7 @@ if elNoise:
                                               positionsHCalBarrelTool = HCalBcellVols,
                                               seedSigma = sigma1,
                                               neighbourSigma = sigma2,
-                                              lastNeighbourSigma = sigma3,
-                                              OutputLevel = INFO)
+                                              lastNeighbourSigma = sigma3)
     createTopoClustersNoise.clusters.Path = "caloClustersBarrelNoise"
     createTopoClustersNoise.clusterCells.Path = "caloClusterBarrelNoiseCells"
 
@@ -258,8 +261,7 @@ if elNoise:
                                                           positionsEMFwdTool = ECalFwdcells,
                                                           positionsHFwdTool = HCalFwdcells,
                                                           hits = "caloClusterBarrelNoiseCells",
-                                                          positionedHits = "caloClusterBarrelNoiseCellPositions",
-                                                          OutputLevel = INFO)
+                                                          positionedHits = "caloClusterBarrelNoiseCellPositions")
 
 ##############################################################################################################
 #######                          NOISE/NO NOISE TOOL FOR CLUSTER THRESHOLDS                      #############
@@ -311,15 +313,13 @@ if puNoise:
                                     activeFieldName = hcalIdentifierName,
                                     readoutName = hcalBarrelReadoutName,
                                     fieldNames = hcalFieldNames,
-                                    fieldValues = hcalFieldValues,
-                                    OutputLevel = INFO)
+                                    fieldValues = hcalFieldValues)
     
     createHcalBarrelCells = CreateCaloCells("CreateHCalBarrelCells",
                                             geometryTool = hcalgeo,
                                             doCellCalibration = False,
                                             addCellNoise = True, filterCellNoise = False,
-                                            noiseTool = noiseHcal,
-                                            OutputLevel = INFO)
+                                            noiseTool = noiseHcal)
     createHcalBarrelCells.hits.Path="HCalBarrelCells"
     createHcalBarrelCells.cells.Path="HCalBarrelCellsNoise"
        
@@ -332,8 +332,7 @@ if puNoise:
                                                     hcalBarrelReadoutName = hcalBarrelReadoutName,
                                                     hcalExtBarrelReadoutName = "",
                                                     hcalEndcapReadoutName = "",
-                                                    hcalFwdReadoutName = "",
-                                                    OutputLevel = DEBUG)
+                                                    hcalFwdReadoutName = "")
     createTopoInputNoise.ecalBarrelCells.Path = "ECalBarrelCellsNoise"
     createTopoInputNoise.ecalEndcapCells.Path = "emptyCaloCells"
     createTopoInputNoise.ecalFwdCells.Path = "emptyCaloCells"
@@ -343,8 +342,7 @@ if puNoise:
     createTopoInputNoise.hcalFwdCells.Path = "emptyCaloCells"
     
     readNoisyCellsMap = TopoCaloNoisyCells("ReadNoisyCellsMap",
-                                           fileName = "/afs/cern.ch/work/c/cneubuse/public/FCChh/inBfield/cellNoise_map_segHcal_noiseLevelElectronicsPileup_mu"+str(puEvents)+".root",
-                                           OutputLevel = INFO)
+                                           fileName = "/afs/cern.ch/work/c/cneubuse/public/FCChh/inBfield/cellNoise_map_segHcal_noiseLevelElectronicsPileup_mu"+str(puEvents)+".root")
     
     # Topo-Cluster Algorithm
     # Seed and neighbour thresholds 4 - 2 - 0 w/noise
@@ -359,8 +357,7 @@ if puNoise:
                                               positionsHCalBarrelTool = HCalBcellVols,
                                               seedSigma = sigma1,
                                               neighbourSigma = sigma2,
-                                              lastNeighbourSigma = sigma3,
-                                              OutputLevel = DEBUG)
+                                              lastNeighbourSigma = sigma3)
     createTopoClustersNoise.clusters.Path = "caloClustersBarrelNoise"
     createTopoClustersNoise.clusterCells.Path = "caloClusterBarrelNoiseCells"
     
@@ -374,8 +371,7 @@ if puNoise:
                                                           positionsEMFwdTool = ECalFwdcells,
                                                           positionsHFwdTool = HCalFwdcells,
                                                           hits = "caloClusterBarrelNoiseCells",
-                                                          positionedHits = "caloClusterBarrelNoiseCellPositions",
-                                                          OutputLevel = INFO)
+                                                          positionedHits = "caloClusterBarrelNoiseCellPositions")
     
 ##############################################################################################################
 #######                                 TOPO-CLUSTERING                                          #############
@@ -450,7 +446,7 @@ out.outputCommands = ["drop *", "keep GenParticles", "keep GenVertices", "keep c
 out.filename = output_name
 
 if elNoise or puNoise:
-    out.outputCommands += ["keep ECalBarrelCellsNoise", "keep HCalBarrelCellsNoise", "keep caloClustersBarrelNoise","keep caloClusterBarrelNoiseCells",  "keep caloClusterBarrelCellPositions"]
+    out.outputCommands += ["keep ECalBarrelCellsNoise", "keep HCalBarrelCellsNoise", "keep caloClustersBarrelNoise","keep caloClusterBarrelNoiseCells",  "keep caloClusterBarrelNoiseCellPositions"]
 out.filename = output_name
 
 #CPU information
@@ -477,5 +473,6 @@ ApplicationMgr(
     TopAlg = list_of_algorithms,
     EvtSel = 'NONE',
     EvtMax   = num_events,
-    ExtSvc = [geoservice, podioevent, audsvc]
+    ExtSvc = [geoservice, podioevent, audsvc],
+    OutputLevel = INFO
 )

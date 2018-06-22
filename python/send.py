@@ -499,7 +499,7 @@ if __name__=="__main__":
         if args.recTopoClusters:
             common_fccsw_command += ' --sigma1 ' + str(args.sigma1) + ' --sigma2 ' + str(args.sigma2) + ' --sigma3 ' + str(args.sigma3) + ' '
             if args.pileup:
-                common_fccsw_command += ' --pileup ' + str(args.pileup)
+                common_fccsw_command +=  '--addElectronicsNoise --pileup ' + str(args.pileup)
         print '-------------------------------------'
         print common_fccsw_command
         print '-------------------------------------'
