@@ -68,7 +68,7 @@ def takeOnlyNonexistingFiles(files, output):
         tocheck=tocheck.replace('.root','')
         for ff in All_files:
             if tocheck in ff: found=True
-        if not found:newlist.append(f)
+        if not found: newlist.append(f)
     return newlist, len(newlist)
 
 
@@ -108,7 +108,13 @@ def getJobInfo(argv):
         job_type = "simuPU"
         short_job_type = "addPileup"
         return default_options,job_type,short_job_type,False
- 
+
+    elif '--mergePileupTracker' or '--addPileupToSignalTracker' in sys.argv:
+        default_options = 'config/overlayPileup_tracker.py'
+        job_type = "simuPUTracker"
+        short_job_type = "PUTracker"
+        return default_options,job_type,short_job_type,False
+
     elif '--recTopoClusters' in argv:
         default_options = 'config/recTopoClusters.py'
         job_type = "ntup/topoClusters"
@@ -135,6 +141,19 @@ def getJobInfo(argv):
         else:
           job_type="simu/trkPerf_v3_03"
           short_job_type = "sim"
+        return default_options,job_type,short_job_type,True
+
+    elif '--trackerOnly' in argv:
+        default_options = 'config/geantSim_tracker.py'
+        job_type="simu/tracker"
+        short_job_type = "sim"
+        return default_options,job_type,short_job_type,True
+
+    elif '--trackerMergedHits' in argv:
+        print('option TrackerMergedHits')
+        default_options = 'config/geantSim_tracker.py'
+        job_type="simu/tracker/mergedHits"
+        short_job_type = "sim"
         return default_options,job_type,short_job_type,True
 
     else:
@@ -169,7 +188,8 @@ if __name__=="__main__":
     parser.add_argument('-N','--numJobs', type=int, default = 10, help='Number of jobs to submit')
     parser.add_argument('-o','--output', type=str, help='Path of the output on EOS', default="/eos/experiment/fcc/hh/simulation/samples/")
     parser.add_argument('-l','--log', type=str, help='Path of the logs', default = "BatchOutputs/")
-
+    parser.add_argument("--trackerOnly", action='store_true', help="Tracker-only performance studies, can be used for both, simulation and hits merging")
+    parser.add_argument("--mergeSimParticles", action='store_true', help="Set this flag to allow simulated particles to be merged as well")
 
     jobTypeGroup = parser.add_mutually_exclusive_group() # Type of job: simulation or reconstruction
     jobTypeGroup.add_argument("--sim", action='store_true', help="Simulation (default)")
@@ -179,12 +199,15 @@ if __name__=="__main__":
     jobTypeGroup.add_argument("--estimatePileup", action='store_true', help="Estimate pileup from minbias events")
     jobTypeGroup.add_argument("--mergePileup", action='store_true', help="Estimate pileup from minbias events")
     jobTypeGroup.add_argument('--addPileupToSignal', action="store_true", help='Add PU events to signal.')
+    jobTypeGroup.add_argument("--mergePileupTracker", action='store_true', help="Estimate pileup from minbias events for tracker only")
+    jobTypeGroup.add_argument("--addPileupToSignalTracker", action='store_true', help="Add PU events to signal. for tracker only")
     jobTypeGroup.add_argument("--ntuple", action='store_true', help="Conversion to ntuple")
     jobTypeGroup.add_argument("--trackerPerformance", action='store_true', help="Tracker-only performance studies")
+    jobTypeGroup.add_argument("--trackerMergedHits", action='store_true', help="Tracker-only performance using merged hits")
     # Add noise on cluster level
     parser.add_argument("--noise", action='store_true', help="Add electronics noise")
     parser.add_argument("--addPileupNoise", action='store_true', help="Add pile-up noise in qudrature to electronics noise")
-    parser.add_argument('--pileup', type=int,  required = '--mergePileup' in sys.argv or '--addPileupNoise' in sys.argv or '--addPileupToSignal' in sys.argv, help='Pileup')
+    parser.add_argument('--pileup', type=int,  required = '--mergePileup' in sys.argv or '--addPileupNoise' in sys.argv or '--addPileupToSignal' in sys.argv or '--mergePilupTracker' in sys.argv or 'addPileupToSignalTracker' in sys.argv, help='Pileup')
     parser.add_argument("--tripletTracker", action="store_true", help="Use triplet tracker layout instead of baseline")
 
     default_options,job_type,short_job_type,sim = getJobInfo(sys.argv)
@@ -277,6 +300,10 @@ if __name__=="__main__":
     elif (args.recPositions or args.recTopoClusters or args.recSlidingWindow) and args.pileup: # if reconstruction is run on pileup (mixed) events
         job_type = job_type.replace("ntup", "ntupPU"+str(args.pileup)).replace("reco", "recoPU"+str(args.pileup))
         short_job_type += "PU"+str(args.pileup)
+    elif (args.mergePileupTracker or args.addPileupToSignalTracker):
+        job_type = "simuPUTracker"+str(args.pileup)
+        short_job_type += "PU"+str(args.pileup)
+        num_events = args.numEvents
     elif args.pileup:
         warning("'--pileup "+str(args.pileup)+"' is specified but no usecase was found. Please remove it or update job sending script.")
     if args.recSlidingWindow:
@@ -360,16 +387,20 @@ if __name__=="__main__":
         warning("Please note that '--recPositions' is not supported for FCCSW v0.9.1. Make sure that you use suitable software version (recommended: '--local inits/reco.py')", True)
     if args.recTopoClusters and not args.local == "inits/reco.py":
         warning("Please note that '--recTopoClusters' is not supported for FCCSW v0.9.1. Make sure that you use suitable software version (recommended: '--local inits/reco.py')", True)
-
+    if args.trackerMergedHits and not args.local == "inits/trackerMergedHits.py":
+        warning("Please note that '--trackerMergedHits' is not supported for FCCSW v0.9.1. Make sure that you use suitable software version (recommended: '--local inits/trackerMergedHits.py')", True)
+    if (args.mergePileupTracker or args.addPileupToSignalTracker) and not args.local == "inits/mergePileupTracker.py":
+        warning("Please note that '--mergePileupTracker' is not supported for FCCSW v0.9.1. Make sure that you use suitable software version (recommended: '--local inits/mergePileupTracker.py')", True)
     # first make sure the output path for root files exists
     outdir = os.path.join( output_path, version, job_dir, job_type)
     print "Output will be stored in ... ", outdir
     if not sim:
         # if signal events are used (simu/) or mixed pileup events (simuPU.../)
-        if not args.mergePileup and not args.addPileupNoise and not args.addPileupToSignal and args.pileup and not (args.pileup == 0):
+        if not args.mergePileup and not args.addPileupNoise and not args.addPileupToSignal and args.pileup and not (args.pileup == 0) and not args.mergePileupTracker and not args.addPileupToSignalTracker:
             inputID = os.path.join(yamldir, version, job_dir, 'simuPU'+str(args.pileup))
         else:
             inputID = os.path.join(yamldir, version, job_dir, 'simu')
+            if (args.trackerOnly): inputID = os.path.join(yamldir, version, job_dir, 'simu/tracker')
         outputID = os.path.join(yamldir, version, job_dir, job_type)
 
         input_files = getInputFiles(inputID)
@@ -384,9 +415,12 @@ if __name__=="__main__":
     
     # for the purpose of mixing pileup events (only or to signal) all inputs must be passed to the config
     # merging pileup events will be done randomly from a given event pool
-    if args.mergePileup or args.addPileupToSignal:
+    if args.mergePileup or args.addPileupToSignal or args.mergePileupTracker or args.addPileupToSignalTracker:
         all_inputs = ""
-        if args.addPileupToSignal: 
+        if args.addPileupToSignalTracker:
+            inputPileupID = os.path.join(yamldir, version, 'physics/MinBias/'+b_field_str+'/etaFull/simuPUTracker100')
+            pileup_input_files = getInputFiles(inputPileupID)
+        elif args.addPileupToSignal:
             inputPileupID = os.path.join(yamldir, version, 'physics/MinBias/'+b_field_str+'/etaFull/simuPU'+str(args.pileup))
             pileup_input_files = getInputFiles(inputPileupID)
         else: 
@@ -404,7 +438,6 @@ if __name__=="__main__":
     logdir = args.log if os.path.isabs(args.log) else current_dir + '/' +  args.log
     job_options = job_options if os.path.isabs(job_options) else current_dir + '/' +  job_options
     print  "Saving the logs in ... ",logdir
-
     # if Pythia used, figure out the Pythia card
     if sim and args.physics:
         if LHE:
@@ -413,7 +446,6 @@ if __name__=="__main__":
             card = current_dir + "/PythiaCards/pythia_pp_" + process + ".cmd"
         print card
         print os.path.isfile(card)
-
     seed=''
     uid=os.path.join(version, job_dir, job_type)
     for i in xrange(num_jobs):
@@ -434,7 +466,7 @@ if __name__=="__main__":
             infile = os.path.basename(input_files[i])
             outfile = infile
             print "Name of the input file: ", infile
-            if args.addPileupToSignal :
+            if args.addPileupToSignal or args.addPileupToSignalTracker:
                 print "Names of the input files for pileup events: ", pileup_input_files
 
             yamldir_process = '%s/%s'%(yamldir,uid)
@@ -491,7 +523,12 @@ if __name__=="__main__":
         if '--local' in sys.argv:
             common_fccsw_command += ' --detectorPath ' + path_to_FCCSW
         if args.physics and args.mergePileup:
-            common_fccsw_command += ' --pileup ' + str(args.pileup)            
+            common_fccsw_command += ' --pileup ' + str(args.pileup)
+        if args.mergePileupTracker:
+            common_fccsw_command += ' --pileup ' + str(args.pileup)
+        if args.mergeSimParticles:
+            common_fccsw_command += ' --mergeSimParticles'
+            print "MERGESIMPARTICLES" , common_fccsw_command
         if args.recPositions and args.pileup:
             common_fccsw_command += ' --prefixCollections merged '
         if args.recSlidingWindow:
@@ -504,7 +541,10 @@ if __name__=="__main__":
         print common_fccsw_command
         print '-------------------------------------'
         if args.tripletTracker:
-          common_fccsw_command += '--tripletTracker'
+          common_fccsw_command += ' --tripletTracker'
+        if args.trackerMergedHits:
+          common_fccsw_command += ' --trackerMergedHits'
+          print common_fccsw_command
         if sim:
             if args.physics:
                 frun.write('cp %s $JOBDIR/card.cmd\n'%(card))
@@ -549,6 +589,10 @@ if __name__=="__main__":
                 frun.write('%s --inName %s\n'%(common_fccsw_command, all_inputs))
             elif args.addPileupToSignal:
                 frun.write('%s --inName %s --inPileupFileNames %s\n'%( common_fccsw_command, input_files[i], all_inputs))
+            elif args.mergePileupTracker:
+                frun.write('%s --inName %s\n'%( common_fccsw_command, all_inputs))
+            elif args.addPileupToSignalTracker:
+                frun.write('%s --inSignalName %s --inName %s\n'%( common_fccsw_command, input_files[i], all_inputs))
             else:
                 frun.write('%s --inName %s\n'%(common_fccsw_command, input_files[i]))
         if args.recPositions:
