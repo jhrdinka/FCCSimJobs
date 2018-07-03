@@ -401,6 +401,7 @@ if __name__=="__main__":
         else:
             inputID = os.path.join(yamldir, version, job_dir, 'simu')
             if (args.trackerOnly): inputID = os.path.join(yamldir, version, job_dir, 'simu/tracker')
+            if (args.trackerMergedHits): inputID = os.path.join(yamldir, version, job_dir, 'simu/tracker/mergedHits')
         outputID = os.path.join(yamldir, version, job_dir, job_type)
 
         input_files = getInputFiles(inputID)
