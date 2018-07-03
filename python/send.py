@@ -190,6 +190,7 @@ if __name__=="__main__":
     parser.add_argument('-l','--log', type=str, help='Path of the logs', default = "BatchOutputs/")
     parser.add_argument("--trackerOnly", action='store_true', help="Tracker-only performance studies, can be used for both, simulation and hits merging")
     parser.add_argument("--mergeSimParticles", action='store_true', help="Set this flag to allow simulated particles to be merged as well")
+    parser.add_argument("--trackerMergedHits", action='store_true', help="Tracker-only performance using merged hits")
 
     jobTypeGroup = parser.add_mutually_exclusive_group() # Type of job: simulation or reconstruction
     jobTypeGroup.add_argument("--sim", action='store_true', help="Simulation (default)")
@@ -203,7 +204,8 @@ if __name__=="__main__":
     jobTypeGroup.add_argument("--addPileupToSignalTracker", action='store_true', help="Add PU events to signal. for tracker only")
     jobTypeGroup.add_argument("--ntuple", action='store_true', help="Conversion to ntuple")
     jobTypeGroup.add_argument("--trackerPerformance", action='store_true', help="Tracker-only performance studies")
-    jobTypeGroup.add_argument("--trackerMergedHits", action='store_true', help="Tracker-only performance using merged hits")
+
+    jobTypeGroup.add_argument("--trackerDigitization", action='store_true', help="Tracker-only digitization")
     # Add noise on cluster level
     parser.add_argument("--noise", action='store_true', help="Add electronics noise")
     parser.add_argument("--addPileupNoise", action='store_true', help="Add pile-up noise in qudrature to electronics noise")
@@ -401,6 +403,7 @@ if __name__=="__main__":
         else:
             inputID = os.path.join(yamldir, version, job_dir, 'simu')
             if (args.trackerOnly): inputID = os.path.join(yamldir, version, job_dir, 'simu/tracker')
+            if (args.trackerMergedHits): inputID = os.path.join(yamldir, version, job_dir, 'simu/tracker/mergedHits')
         outputID = os.path.join(yamldir, version, job_dir, job_type)
 
         input_files = getInputFiles(inputID)
