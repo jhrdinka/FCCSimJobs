@@ -91,6 +91,14 @@ def getJobInfo(argv):
         short_job_type = "recWin"
         return default_options,job_type,short_job_type,False
 
+    elif '--trackerDigitization' in argv:
+        default_options = 'config/digitization_tracker.py'
+        job_type = "reco/tracker/clusters"
+        short_job_type = "trackerDigi"
+        if '--mergePileupTracker' in argv or '--addPileupToSignalTracker' in argv:
+            job_type = "reco/tracker/PU/clusters"
+        return default_options,job_type,short_job_type,False
+
     elif '--estimatePileup' in sys.argv:
         default_options = 'config/preparePileup.py'
         job_type = "ana/pileup_cluster"
@@ -109,7 +117,8 @@ def getJobInfo(argv):
         short_job_type = "addPileup"
         return default_options,job_type,short_job_type,False
 
-    elif '--mergePileupTracker' or '--addPileupToSignalTracker' in sys.argv:
+    elif '--mergePileupTracker' in argv or '--addPileupToSignalTracker' in argv:
+        print "mergePileup"
         default_options = 'config/overlayPileup_tracker.py'
         job_type = "simuPUTracker"
         short_job_type = "PUTracker"
@@ -150,7 +159,6 @@ def getJobInfo(argv):
         return default_options,job_type,short_job_type,True
 
     elif '--trackerMergedHits' in argv:
-        print('option TrackerMergedHits')
         default_options = 'config/geantSim_tracker.py'
         job_type="simu/tracker/mergedHits"
         short_job_type = "sim"
@@ -190,6 +198,9 @@ if __name__=="__main__":
     parser.add_argument('-l','--log', type=str, help='Path of the logs', default = "BatchOutputs/")
     parser.add_argument("--trackerOnly", action='store_true', help="Tracker-only performance studies, can be used for both, simulation and hits merging")
     parser.add_argument("--mergeSimParticles", action='store_true', help="Set this flag to allow simulated particles to be merged as well")
+    parser.add_argument("--trackerMergedHits", action='store_true', help="Tracker-only performance using merged hits")
+    parser.add_argument("--mergePileupTracker", action='store_true', help="Estimate pileup from minbias events for tracker only")
+    parser.add_argument("--addPileupToSignalTracker", action='store_true', help="Add PU events to signal. for tracker only")
 
     jobTypeGroup = parser.add_mutually_exclusive_group() # Type of job: simulation or reconstruction
     jobTypeGroup.add_argument("--sim", action='store_true', help="Simulation (default)")
@@ -199,11 +210,9 @@ if __name__=="__main__":
     jobTypeGroup.add_argument("--estimatePileup", action='store_true', help="Estimate pileup from minbias events")
     jobTypeGroup.add_argument("--mergePileup", action='store_true', help="Estimate pileup from minbias events")
     jobTypeGroup.add_argument('--addPileupToSignal', action="store_true", help='Add PU events to signal.')
-    jobTypeGroup.add_argument("--mergePileupTracker", action='store_true', help="Estimate pileup from minbias events for tracker only")
-    jobTypeGroup.add_argument("--addPileupToSignalTracker", action='store_true', help="Add PU events to signal. for tracker only")
     jobTypeGroup.add_argument("--ntuple", action='store_true', help="Conversion to ntuple")
     jobTypeGroup.add_argument("--trackerPerformance", action='store_true', help="Tracker-only performance studies")
-    jobTypeGroup.add_argument("--trackerMergedHits", action='store_true', help="Tracker-only performance using merged hits")
+    jobTypeGroup.add_argument("--trackerDigitization", action='store_true', help="Tracker-only digitization")
     # Add noise on cluster level
     parser.add_argument("--noise", action='store_true', help="Add electronics noise")
     parser.add_argument("--addPileupNoise", action='store_true', help="Add pile-up noise in qudrature to electronics noise")
@@ -300,6 +309,12 @@ if __name__=="__main__":
     elif (args.recPositions or args.recTopoClusters or args.recSlidingWindow) and args.pileup: # if reconstruction is run on pileup (mixed) events
         job_type = job_type.replace("ntup", "ntupPU"+str(args.pileup)).replace("reco", "recoPU"+str(args.pileup))
         short_job_type += "PU"+str(args.pileup)
+    elif (args.trackerDigitization):
+        job_type = "reco/tracker/clusters"
+        short_job_type = "trackerDigi"
+        if (args.mergePileupTracker or args.addPileupToSignalTracker):
+            job_type = "reco/tracker/PU"+str(args.pileup)+"/clusters"
+        num_events = args.numEvents
     elif (args.mergePileupTracker or args.addPileupToSignalTracker):
         job_type = "simuPUTracker"+str(args.pileup)
         short_job_type += "PU"+str(args.pileup)
@@ -387,25 +402,30 @@ if __name__=="__main__":
         warning("Please note that '--recPositions' is not supported for FCCSW v0.9.1. Make sure that you use suitable software version (recommended: '--local inits/reco.py')", True)
     if args.recTopoClusters and not args.local == "inits/reco.py":
         warning("Please note that '--recTopoClusters' is not supported for FCCSW v0.9.1. Make sure that you use suitable software version (recommended: '--local inits/reco.py')", True)
-    if args.trackerMergedHits and not args.local == "inits/trackerMergedHits.py":
-        warning("Please note that '--trackerMergedHits' is not supported for FCCSW v0.9.1. Make sure that you use suitable software version (recommended: '--local inits/trackerMergedHits.py')", True)
-    if (args.mergePileupTracker or args.addPileupToSignalTracker) and not args.local == "inits/mergePileupTracker.py":
+    if args.trackerMergedHits and not args.local == "inits/trackerMergedHitsAndDigi.py" and not (args.mergePileupTracker or args.addPileupToSignalTracker or args.trackerDigitization):
+        warning("Please note that '--trackerMergedHits' is not supported for FCCSW v0.9.1. Make sure that you use suitable software version (recommended: '--local inits/trackerMergedHitsAndDigi.py')", True)
+    if (args.mergePileupTracker or args.addPileupToSignalTracker) and not args.local == "inits/mergePileupTracker.py" and not args.trackerDigitization:
         warning("Please note that '--mergePileupTracker' is not supported for FCCSW v0.9.1. Make sure that you use suitable software version (recommended: '--local inits/mergePileupTracker.py')", True)
+    if (args.trackerDigitization) and not args.local == "inits/trackerMergedHitsAndDigi.py":
+        warning("Please note that '--trackerDigitization' is not supported for FCCSW v0.9.1. Make sure that you use suitable software version (recommended: '--local inits/trackerMergedHitsAndDigi.py')", True)
     # first make sure the output path for root files exists
     outdir = os.path.join( output_path, version, job_dir, job_type)
     print "Output will be stored in ... ", outdir
     if not sim:
         # if signal events are used (simu/) or mixed pileup events (simuPU.../)
-        if not args.mergePileup and not args.addPileupNoise and not args.addPileupToSignal and args.pileup and not (args.pileup == 0) and not args.mergePileupTracker and not args.addPileupToSignalTracker:
+        if not args.mergePileup and not args.addPileupNoise and not args.addPileupToSignal and args.pileup and not (args.pileup == 0) and not args.mergePileupTracker and not args.addPileupToSignalTracker and not args.trackerDigitization:
             inputID = os.path.join(yamldir, version, job_dir, 'simuPU'+str(args.pileup))
         else:
-            inputID = os.path.join(yamldir, version, job_dir, 'simu')
             if (args.trackerOnly): inputID = os.path.join(yamldir, version, job_dir, 'simu/tracker')
-            if (args.trackerMergedHits): inputID = os.path.join(yamldir, version, job_dir, 'simu/tracker/mergedHits')
+            elif (args.trackerMergedHits): inputID = os.path.join(yamldir, version, job_dir, 'simu/tracker/mergedHits')
+            elif (args.mergePileupTracker or args.addPileupToSignalTracker): inputID = os.path.join(yamldir, version, job_dir, 'simuPUTracker'+str(args.pileup)+'')
+            else: inputID = os.path.join(yamldir, version, job_dir, 'simu')
         outputID = os.path.join(yamldir, version, job_dir, job_type)
 
         input_files = getInputFiles(inputID)
+        print "inputID: " , inputID
         input_files, instatus = takeOnlyNonexistingFiles(input_files, outputID)
+        print "ouputID: " , outputID
 
         if instatus == 0:
             warning("Directory contains no files")
@@ -527,9 +547,11 @@ if __name__=="__main__":
             common_fccsw_command += ' --pileup ' + str(args.pileup)
         if args.mergePileupTracker:
             common_fccsw_command += ' --pileup ' + str(args.pileup)
+            common_fccsw_command += ' --puOnlyDigi'
+        if args.addPileupToSignalTracker:
+            common_fccsw_command += ' --signalPUDigi'
         if args.mergeSimParticles:
             common_fccsw_command += ' --mergeSimParticles'
-            print "MERGESIMPARTICLES" , common_fccsw_command
         if args.recPositions and args.pileup:
             common_fccsw_command += ' --prefixCollections merged '
         if args.recSlidingWindow:
@@ -590,10 +612,12 @@ if __name__=="__main__":
                 frun.write('%s --inName %s\n'%(common_fccsw_command, all_inputs))
             elif args.addPileupToSignal:
                 frun.write('%s --inName %s --inPileupFileNames %s\n'%( common_fccsw_command, input_files[i], all_inputs))
-            elif args.mergePileupTracker:
+            elif args.mergePileupTracker and not args.trackerDigitization:
                 frun.write('%s --inName %s\n'%( common_fccsw_command, all_inputs))
-            elif args.addPileupToSignalTracker:
+            elif args.addPileupToSignalTracker and not args.trackerDigitization:
                 frun.write('%s --inSignalName %s --inName %s\n'%( common_fccsw_command, input_files[i], all_inputs))
+            elif args.trackerDigitization:
+                frun.write('%s --inName %s\n'%( common_fccsw_command, input_files[i]))
             else:
                 frun.write('%s --inName %s\n'%(common_fccsw_command, input_files[i]))
         if args.recPositions:
